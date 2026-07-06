@@ -1,10 +1,12 @@
+export const BASE = typeof __BASE_PATH__ !== 'undefined' ? __BASE_PATH__ : '';
+
 async function req(method, url, body) {
   const opts = { method, headers: {}, credentials: 'same-origin' };
   if (body !== undefined) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   }
-  const r = await fetch(url, opts);
+  const r = await fetch(BASE + url, opts);
   if (r.status === 401) throw Object.assign(new Error('Unauthorized'), { unauthorized: true });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
@@ -29,7 +31,7 @@ export const api = {
   upload: async (file) => {
     const fd = new FormData();
     fd.append('file', file);
-    const r = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'same-origin' });
+    const r = await fetch(BASE + '/api/upload', { method: 'POST', body: fd, credentials: 'same-origin' });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || 'Upload failed');
     return j; // { url }

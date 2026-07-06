@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link2, User, Blocks, Palette, BarChart3, Mail, LogOut, ExternalLink, Lock } from 'lucide-react';
-import { api } from './api';
+import { api, BASE } from './api';
 import ProfileTab from './components/ProfileTab.jsx';
 import BlocksTab from './components/BlocksTab.jsx';
 import ThemeTab from './components/ThemeTab.jsx';
@@ -97,7 +97,7 @@ export default function App() {
         </div>
         <div className="flex items-center gap-2">
           <a
-            href="/"
+            href={BASE || '/'}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white px-3 py-2 rounded-lg hover:bg-zinc-800 transition-colors"

@@ -118,7 +118,7 @@ function isBlockLive(b, now = new Date()) {
   return true;
 }
 
-function renderBlock(b) {
+function renderBlock(b, basePath) {
   if (b.type === 'header') {
     return `<div class="block-header">${esc(b.title)}</div>`;
   }
@@ -139,10 +139,10 @@ function renderBlock(b) {
   }
   // default: link
   const thumb = b.thumbnail ? `<img class="thumb" src="${esc(b.thumbnail)}" alt="">` : '';
-  return `<a class="block-link${b.animate ? ' animate' : ''}" href="/r/${b.id}" ${/^https?:/.test(b.url) ? '' : 'rel="nofollow"'}>${thumb}<span>${esc(b.title)}</span></a>`;
+  return `<a class="block-link${b.animate ? ' animate' : ''}" href="${basePath}/r/${b.id}" ${/^https?:/.test(b.url) ? '' : 'rel="nofollow"'}>${thumb}<span>${esc(b.title)}</span></a>`;
 }
 
-function renderPublicPage({ settings, blocks, origin = '' }) {
+function renderPublicPage({ settings, blocks, origin = '', basePath = '' }) {
   const s = settings;
   const font = FONTS[s.font] || FONTS.system;
   const theme = THEMES.includes(s.theme) ? s.theme : 'gradient';
@@ -193,7 +193,7 @@ ${s.custom_css ? `<style>\n${s.custom_css}\n</style>` : ''}
   ${s.bio ? `<p class="bio">${esc(s.bio)}</p>` : ''}
   ${socialRow ? `<div class="socials">${socialRow}</div>` : ''}
   <div class="blocks">
-    ${live.map(renderBlock).join('\n    ')}
+    ${live.map((b) => renderBlock(b, basePath)).join('\n    ')}
   </div>
 </main>
 <script>
@@ -202,7 +202,7 @@ async function subscribe(e, blockId){
   var form = e.target, msg = form.parentElement.querySelector('.msg');
   var email = form.email.value;
   try {
-    var r = await fetch('/api/public/subscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email: email, block_id: blockId }) });
+    var r = await fetch('${basePath}/api/public/subscribe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email: email, block_id: blockId }) });
     var j = await r.json();
     msg.textContent = r.ok ? (j.message || 'Subscribed! 🎉') : (j.error || 'Something went wrong');
     if (r.ok) form.reset();

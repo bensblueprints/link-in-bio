@@ -11,9 +11,12 @@ function createApp(opts = {}) {
   const dataDir = opts.dataDir || process.env.DATA_DIR || path.join(__dirname, '..', 'data');
   const adminPassword = opts.adminPassword || process.env.ADMIN_PASSWORD || 'admin';
   const autologinToken = opts.autologinToken || process.env.AUTOLOGIN_TOKEN || null;
+  const basePath = (opts.basePath || process.env.BASE_PATH || '').replace(/\/$/, '');
+  const adminPath = opts.adminPath || process.env.ADMIN_PATH || 'admin';
 
   const db = openDb(dataDir);
   const app = express();
+  const router = express.Router();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
@@ -47,30 +50,30 @@ function createApp(opts = {}) {
       cb(null, /^image\/(png|jpe?g|webp|gif|svg\+xml|avif)$/.test(file.mimetype));
     }
   });
-  app.use('/uploads', express.static(uploadsDir, { maxAge: '7d' }));
+  router.use('/uploads', express.static(uploadsDir, { maxAge: '7d' }));
 
   // ================= PUBLIC =================
 
-  app.get('/', (req, res) => {
+  router.get('/', (req, res) => {
     const settings = getSettings(db);
     const blocks = db.prepare('SELECT * FROM blocks ORDER BY position ASC, id ASC').all();
     db.prepare('INSERT INTO views DEFAULT VALUES').run();
     const origin = `${req.protocol}://${req.get('host')}`;
     res.set('Cache-Control', 'no-store');
-    res.type('html').send(renderPublicPage({ settings, blocks, origin }));
+    res.type('html').send(renderPublicPage({ settings, blocks, origin, basePath }));
   });
 
   // tracked redirect
-  app.get('/r/:id', (req, res) => {
+  router.get('/r/:id', (req, res) => {
     const block = db.prepare('SELECT * FROM blocks WHERE id = ?').get(req.params.id);
     if (!block || block.type !== 'link' || !block.url || !isBlockLive(block)) {
-      return res.redirect('/');
+      return res.redirect(`${basePath}/`);
     }
     db.prepare('INSERT INTO clicks (block_id) VALUES (?)').run(block.id);
     res.redirect(block.url);
   });
 
-  app.post('/api/public/subscribe', (req, res) => {
+  router.post('/api/public/subscribe', (req, res) => {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const blockId = Number(req.body?.block_id) || null;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -86,7 +89,7 @@ function createApp(opts = {}) {
 
   // ================= AUTH =================
 
-  app.post('/api/login', (req, res) => {
+  router.post('/api/login', (req, res) => {
     const pw = String(req.body?.password || '');
     const a = Buffer.from(pw);
     const b = Buffer.from(adminPassword);
@@ -96,28 +99,28 @@ function createApp(opts = {}) {
     res.json({ ok: true });
   });
 
-  app.post('/api/logout', (req, res) => {
+  router.post('/api/logout', (req, res) => {
     sessions.delete(req.cookies.sid);
     res.clearCookie('sid');
     res.json({ ok: true });
   });
 
-  app.get('/api/me', (req, res) => {
+  router.get('/api/me', (req, res) => {
     res.json({ authed: !!(req.cookies.sid && sessions.has(req.cookies.sid)) });
   });
 
   // desktop-mode auto-login
   if (autologinToken) {
-    app.get('/auth/auto', (req, res) => {
+    router.get('/auth/auto', (req, res) => {
       if (req.query.token !== autologinToken) return res.status(403).send('Forbidden');
       newSession(res);
-      res.redirect('/admin');
+      res.redirect(`${basePath}/${adminPath}`);
     });
   }
 
   // ================= ADMIN API =================
 
-  app.get('/api/meta', requireAuth, (req, res) => {
+  router.get('/api/meta', requireAuth, (req, res) => {
     res.json({
       themes: THEMES,
       fonts: Object.fromEntries(Object.entries(FONTS).map(([k, v]) => [k, v.label])),
@@ -125,18 +128,18 @@ function createApp(opts = {}) {
     });
   });
 
-  app.get('/api/settings', requireAuth, (req, res) => {
+  router.get('/api/settings', requireAuth, (req, res) => {
     res.json(getSettings(db));
   });
 
-  app.put('/api/settings', requireAuth, (req, res) => {
+  router.put('/api/settings', requireAuth, (req, res) => {
     setSettings(db, req.body || {});
     res.json(getSettings(db));
   });
 
-  app.post('/api/upload', requireAuth, upload.single('file'), (req, res) => {
+  router.post('/api/upload', requireAuth, upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No image received (png/jpg/webp/gif/svg/avif, max 8MB)' });
-    res.json({ url: `/uploads/${req.file.filename}` });
+    res.json({ url: `${basePath}/uploads/${req.file.filename}` });
   });
 
   // ---- blocks CRUD ----
@@ -150,11 +153,11 @@ function createApp(opts = {}) {
     end_at: b.end_at || null
   });
 
-  app.get('/api/blocks', requireAuth, (req, res) => {
+  router.get('/api/blocks', requireAuth, (req, res) => {
     res.json(db.prepare('SELECT * FROM blocks ORDER BY position ASC, id ASC').all());
   });
 
-  app.post('/api/blocks', requireAuth, (req, res) => {
+  router.post('/api/blocks', requireAuth, (req, res) => {
     const f = blockFields(req.body || {});
     const maxPos = db.prepare('SELECT COALESCE(MAX(position), -1) AS m FROM blocks').get().m;
     const info = db
@@ -166,14 +169,14 @@ function createApp(opts = {}) {
     res.status(201).json(db.prepare('SELECT * FROM blocks WHERE id = ?').get(info.lastInsertRowid));
   });
 
-  app.put('/api/blocks/reorder', requireAuth, (req, res) => {
+  router.put('/api/blocks/reorder', requireAuth, (req, res) => {
     const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
     const stmt = db.prepare('UPDATE blocks SET position = ? WHERE id = ?');
     db.transaction(() => ids.forEach((id, i) => stmt.run(i, id)))();
     res.json({ ok: true });
   });
 
-  app.put('/api/blocks/:id', requireAuth, (req, res) => {
+  router.put('/api/blocks/:id', requireAuth, (req, res) => {
     const existing = db.prepare('SELECT * FROM blocks WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Not found' });
     const f = blockFields({ ...existing, ...req.body });
@@ -184,13 +187,13 @@ function createApp(opts = {}) {
     res.json(db.prepare('SELECT * FROM blocks WHERE id = ?').get(existing.id));
   });
 
-  app.delete('/api/blocks/:id', requireAuth, (req, res) => {
+  router.delete('/api/blocks/:id', requireAuth, (req, res) => {
     db.prepare('DELETE FROM blocks WHERE id = ?').run(req.params.id);
     res.json({ ok: true });
   });
 
   // ---- analytics ----
-  app.get('/api/analytics', requireAuth, (req, res) => {
+  router.get('/api/analytics', requireAuth, (req, res) => {
     const totalViews = db.prepare('SELECT COUNT(*) AS n FROM views').get().n;
     const totalClicks = db.prepare('SELECT COUNT(*) AS n FROM clicks').get().n;
     const perLink = db
@@ -220,18 +223,18 @@ function createApp(opts = {}) {
   });
 
   // ---- subscribers ----
-  app.get('/api/subscribers', requireAuth, (req, res) => {
+  router.get('/api/subscribers', requireAuth, (req, res) => {
     res.json(db.prepare('SELECT * FROM subscribers ORDER BY ts DESC').all());
   });
 
-  app.get('/api/subscribers.csv', requireAuth, (req, res) => {
+  router.get('/api/subscribers.csv', requireAuth, (req, res) => {
     const rows = db.prepare('SELECT email, ts FROM subscribers ORDER BY ts ASC').all();
     const csv = 'email,subscribed_at\n' + rows.map((r) => `${r.email.replace(/"/g, '""')},${r.ts}`).join('\n') + '\n';
     res.set('Content-Disposition', 'attachment; filename="subscribers.csv"');
     res.type('text/csv').send(csv);
   });
 
-  app.delete('/api/subscribers/:id', requireAuth, (req, res) => {
+  router.delete('/api/subscribers/:id', requireAuth, (req, res) => {
     db.prepare('DELETE FROM subscribers WHERE id = ?').run(req.params.id);
     res.json({ ok: true });
   });
@@ -239,13 +242,15 @@ function createApp(opts = {}) {
   // ================= ADMIN SPA =================
   const distDir = path.join(__dirname, '..', 'dist');
   if (fs.existsSync(distDir)) {
-    app.use('/admin', express.static(distDir));
-    app.get('/admin/*', (req, res) => res.sendFile(path.join(distDir, 'index.html')));
+    router.use(`/${adminPath}`, express.static(distDir));
+    router.get(`/${adminPath}/*`, (req, res) => res.sendFile(path.join(distDir, 'index.html')));
   } else {
-    app.get('/admin', (req, res) =>
+    router.get(`/${adminPath}`, (req, res) =>
       res.status(503).type('html').send('<h1>Admin UI not built</h1><p>Run <code>npm run build</code> first.</p>')
     );
   }
+
+  app.use(basePath || '/', router);
 
   app.locals.db = db;
   return app;

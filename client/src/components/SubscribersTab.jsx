@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Download, Trash2 } from 'lucide-react';
-import { api } from '../api';
+import { api, BASE } from '../api';
 import { Card } from './ui.jsx';
 
 export default function SubscribersTab() {
@@ -22,7 +22,7 @@ export default function SubscribersTab() {
       title={`Subscribers (${subs.length})`}
       actions={
         <a
-          href="/api/subscribers.csv"
+          href={`${BASE}/api/subscribers.csv`}
           className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors"
         >
           <Download size={13} /> Export CSV
