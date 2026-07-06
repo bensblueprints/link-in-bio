@@ -1,0 +1,15 @@
+services:
+  link-in-bio:
+    build: .
+    ports:
+      - "5307:5307"
+    environment:
+      - PORT=5307
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - DATA_DIR=/data
+    volumes:
+      - linkinbio-data:/data
+    restart: unless-stopped
+
+volumes:
+  linkinbio-data:
