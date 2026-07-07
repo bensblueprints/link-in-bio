@@ -1,0 +1,44 @@
+# Hosted (multi-tenant) LinkLeaf deploy — linkleaf.im on Coolify.
+# The self-host single-tenant product still uses the plain docker-compose.yml
+# (SQLite, no Postgres) — this file is only for the hosted SaaS.
+# Bundling Postgres in its own container (rather than depending on a
+# Coolify-managed resource) keeps the whole stack portable: `docker compose
+# -f docker-compose.hosted.yml up -d` reproduces it anywhere.
+services:
+  app:
+    build: .
+    ports:
+      - "5307:5307"
+    environment:
+      - PORT=5307
+      - APP_MODE=multi
+      - DATA_DIR=/data
+      - DATABASE_URL=postgresql://${DB_USER:-linkleaf}:${DB_PASSWORD:?set DB_PASSWORD in your .env file}@db:5432/${DB_NAME:-linkleaf}
+      - SESSION_SECRET=${SESSION_SECRET:?set SESSION_SECRET in your .env file}
+      - WHOP_API_KEY=${WHOP_API_KEY:-}
+      - WHOP_WEBHOOK_SECRET=${WHOP_WEBHOOK_SECRET:-}
+    volumes:
+      - linkleaf-hosted-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-linkleaf}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in your .env file}
+      POSTGRES_DB: ${DB_NAME:-linkleaf}
+    volumes:
+      - linkleaf-hosted-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-linkleaf}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  linkleaf-hosted-data:
+  linkleaf-hosted-db:
