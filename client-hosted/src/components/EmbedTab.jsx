@@ -25,8 +25,12 @@ function CodeBlock({ code }) {
   );
 }
 
-export default function EmbedTab() {
-  const pageUrl = `${window.location.origin}${BASE || '/'}`;
+export default function EmbedTab({ username }) {
+  // Hosted mode: the public page lives at /{username}, not the app root. Fall
+  // back to BASE only if we somehow don't have the username yet.
+  const pageUrl = username
+    ? `${window.location.origin}/${username}`
+    : `${window.location.origin}${BASE || '/'}`;
   const embedCode = `<iframe id="link-in-bio-embed" src="${pageUrl}" style="width:100%;max-width:640px;border:0;display:block;margin:0 auto;height:800px" loading="lazy" title="Link in bio"></iframe>
 <script>
 (function () {

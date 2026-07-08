@@ -81,7 +81,7 @@ export default function Dashboard() {
         {tab === 'theme' && <ThemeTab />}
         {tab === 'analytics' && <AnalyticsTab />}
         {tab === 'subscribers' && <SubscribersTab />}
-        {tab === 'embed' && <EmbedTab />}
+        {tab === 'embed' && <EmbedTab username={user.username} />}
       </div>
     </div>
   );
