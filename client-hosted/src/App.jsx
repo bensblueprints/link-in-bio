@@ -8,6 +8,7 @@ import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import Onboarding from './pages/Onboarding.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import VersionBanner from './components/VersionBanner.jsx';
 
 function RequireAuth({ children }) {
   const { user } = useAuth();
@@ -50,6 +51,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppRoutes />
+      <VersionBanner />
     </AuthProvider>
   );
 }

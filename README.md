@@ -89,6 +89,14 @@ Put Caddy / nginx / Traefik in front for TLS, point your domain at the box, and 
 | Custom CSS | ✅ | ❌ |
 | Self-host / own your data | ✅ Open-source | ❌ |
 
+## 🤝 Fork it & build integrations — get paid if we feature you
+
+LinkLeaf is built to be extended, and we want your integrations. Adding a new **block type** or an integration with another platform is a small, self-contained change — see **[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)**.
+
+**The incentive:** if we pick up your fork/integration and put it in a **new video and launch**, you get a **cut of the profits** from everyone who buys the customer-facing app because of it. This applies across all our apps. Details in **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
+Got an idea? [Open an issue](https://github.com/bensblueprints/Link-Leaf/issues) and pitch it — we're actively looking for integrations worth marketing.
+
 ## 🛠️ Tech stack
 
 - **Server:** Node 20+, Express — one process serves the API, dashboard, and public pages

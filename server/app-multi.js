@@ -16,6 +16,20 @@ function createMultiApp(opts = {}) {
   const dataDir = opts.dataDir || process.env.DATA_DIR || path.join(__dirname, '..', 'data');
   const distDir = path.join(__dirname, '..', 'dist-hosted');
 
+  // Build version = the hashed main bundle filename, which changes on every
+  // build. The client polls /api/version and, if it changes while a tab is
+  // open (i.e. we shipped a deploy), offers a one-click refresh. Read once at
+  // startup — each deploy is a fresh container, so this is always current.
+  const BUILD_VERSION = (() => {
+    try {
+      const html = fs.readFileSync(path.join(distDir, 'index.html'), 'utf8');
+      const m = html.match(/assets\/(index-[\w-]+\.js)/);
+      return m ? m[1] : 'dev';
+    } catch {
+      return 'dev';
+    }
+  })();
+
   const app = express();
   app.disable('x-powered-by');
   // rawBody is captured alongside the parsed body so the Whop webhook route
@@ -88,6 +102,8 @@ function createMultiApp(opts = {}) {
   // below — dash is mounted at the /api prefix and its auth middleware runs
   // for every /api/* request regardless of route match, so anything public
   // under /api/* has to win the route match first) =================
+  app.get('/api/version', (req, res) => res.json({ version: BUILD_VERSION }));
+
   app.get('/api/plans', (req, res) => {
     const plans = Object.fromEntries(
       Object.entries(gating.PLANS).map(([key, cfg]) => [
