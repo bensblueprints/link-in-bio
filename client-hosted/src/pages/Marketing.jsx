@@ -35,6 +35,14 @@ export default function Marketing({ scrollToPricing }) {
       <header className="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between">
         <Logo />
         <div className="flex items-center gap-3">
+          <a
+            href="https://github.com/bensblueprints/Link-Leaf"
+            target="_blank"
+            rel="noreferrer"
+            className="hidden sm:inline text-sm text-zinc-400 hover:text-white px-3 py-2"
+          >
+            GitHub
+          </a>
           {loggedIn ? (
             <Link to="/dashboard" className="text-sm font-semibold text-white px-4 py-2 rounded-lg cursor-pointer" style={{ background: 'var(--ll-orange)' }}>
               Dashboard
@@ -73,6 +81,29 @@ export default function Marketing({ scrollToPricing }) {
           <a href="#pricing" className="px-6 py-3 rounded-xl text-sm font-semibold text-zinc-200 border border-zinc-700 hover:border-zinc-500">
             See pricing
           </a>
+        </div>
+      </section>
+
+      {/* Screenshot gallery — show the actual product */}
+      <section className="max-w-5xl mx-auto px-4 pb-8">
+        <h2 className="text-2xl font-extrabold text-center mb-2">Everything in one beautiful page</h2>
+        <p className="text-zinc-400 text-center mb-10 max-w-xl mx-auto">
+          A drag-and-drop editor, a catalog of blocks, six themes, and analytics — all yours.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { src: '/screenshots/08-public-page.png', label: 'Your public page' },
+            { src: '/screenshots/04-dashboard-blocks.png', label: 'Drag-to-reorder editor' },
+            { src: '/screenshots/05-add-block-picker.png', label: 'A catalog of blocks' },
+            { src: '/screenshots/06-themes.png', label: '6 themes + custom styling' },
+            { src: '/screenshots/07-analytics.png', label: 'Built-in analytics' },
+            { src: '/screenshots/03-onboarding.png', label: '60-second setup' }
+          ].map((s) => (
+            <figure key={s.src} className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/40">
+              <img src={s.src} alt={s.label} loading="lazy" className="w-full h-52 object-cover object-top" />
+              <figcaption className="text-xs text-zinc-400 px-4 py-3">{s.label}</figcaption>
+            </figure>
+          ))}
         </div>
       </section>
 
@@ -177,6 +208,17 @@ export default function Marketing({ scrollToPricing }) {
       </section>
 
       <footer className="max-w-5xl mx-auto px-4 py-10 text-center text-xs text-zinc-600">
+        <p className="mb-2">
+          Open-source & self-hostable —{' '}
+          <a
+            href="https://github.com/bensblueprints/Link-Leaf"
+            target="_blank"
+            rel="noreferrer"
+            className="text-zinc-400 hover:text-white underline"
+          >
+            install it yourself on GitHub
+          </a>
+        </p>
         LinkLeaf — Your Connected World.
       </footer>
     </div>

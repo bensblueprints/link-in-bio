@@ -8,6 +8,7 @@ const auth = require('./auth');
 const gating = require('./gating');
 const blockCatalog = require('./block-catalog');
 const whop = require('./whop');
+const admin = require('./admin');
 const { renderPublicPage, FONTS, THEMES, SOCIALS, isBlockLive } = require('./public-page');
 
 function createMultiApp(opts = {}) {
@@ -275,7 +276,11 @@ function createMultiApp(opts = {}) {
     res.redirect(block.url);
   });
 
-  const RESERVED_TOP_LEVEL = new Set(['login', 'signup', 'onboarding', 'dashboard', 'pricing', 'uploads', 'api', 'r', 'assets', 'forgot-password', 'reset-password']);
+  // Admin dashboard (token-gated in admin.js). Registered before /:username so
+  // "admin" can never be shadowed by a page.
+  app.get('/admin', admin.renderAdminPage);
+
+  const RESERVED_TOP_LEVEL = new Set(['login', 'signup', 'onboarding', 'dashboard', 'pricing', 'uploads', 'api', 'r', 'assets', 'forgot-password', 'reset-password', 'admin', 'screenshots']);
 
   app.get('/:username', async (req, res, next) => {
     const username = req.params.username.toLowerCase();

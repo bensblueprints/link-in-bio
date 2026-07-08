@@ -18,7 +18,7 @@ const RESERVED_USERNAMES = new Set([
   'admin', 'api', 'dashboard', 'login', 'signup', 'logout', 'onboarding', 'pricing',
   'r', 'uploads', 'static', 'assets', 'www', 'app', 'help', 'support', 'about',
   'terms', 'privacy', 'linkleaf', 'root', 'null', 'undefined',
-  'forgot-password', 'reset-password'
+  'forgot-password', 'reset-password', 'screenshots'
 ]);
 
 function isValidUsername(u) {
@@ -343,6 +343,28 @@ async function deleteSubscriber(pageId, id) {
   await getPool().query('DELETE FROM subscribers WHERE id = $1 AND page_id = $2', [id, pageId]);
 }
 
+// ---- admin ----
+// Every user joined with their page + a couple of live counts, for the admin
+// dashboard. Newest first.
+async function listAllUsers() {
+  const { rows } = await getPool().query(`
+    SELECT u.id, u.email, u.plan, u.whop_customer_id, u.whop_subscription_id,
+           u.lifetime_seat_no, u.created_at,
+           p.username, p.display_name,
+           (SELECT COUNT(*)::int FROM blocks b WHERE b.page_id = p.id) AS block_count,
+           (SELECT COUNT(*)::int FROM views v WHERE v.page_id = p.id)  AS view_count
+    FROM users u
+    LEFT JOIN pages p ON p.user_id = u.id
+    ORDER BY u.created_at DESC
+  `);
+  return rows;
+}
+
+async function planCounts() {
+  const { rows } = await getPool().query('SELECT plan, COUNT(*)::int AS n FROM users GROUP BY plan');
+  return Object.fromEntries(rows.map((r) => [r.plan, r.n]));
+}
+
 module.exports = {
   getPool,
   isValidUsername,
@@ -374,5 +396,7 @@ module.exports = {
   getAnalytics,
   addSubscriber,
   listSubscribers,
-  deleteSubscriber
+  deleteSubscriber,
+  listAllUsers,
+  planCounts
 };
