@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Check, Loader2, Instagram, Facebook, Youtube, Twitter, Globe, MessageCircle, Music2, ChevronLeft } from 'lucide-react';
 import { onboardingApi } from '../api';
+import { useAuth } from '../AuthContext.jsx';
 import Logo from '../components/Logo.jsx';
 
 const STEPS_FULL = ['username', 'plan', 'theme', 'links', 'profile'];
@@ -252,6 +253,7 @@ function StepProfile({ profile, onChange, onBack, onSubmit, busy }) {
 
 export default function Onboarding() {
   const nav = useNavigate();
+  const { user } = useAuth();
   const [params] = useSearchParams();
   // A plan chosen on the marketing pricing page arrives as ?plan=pro — skip
   // asking again in the wizard (was the "makes me choose the plan twice" bug).
@@ -292,8 +294,14 @@ export default function Onboarding() {
       // plan gets applied automatically by the webhook once payment completes,
       // matched by the same email they used to sign up.
       const cfg = plans?.[plan];
-      const checkout = plan === 'lifetime' ? cfg?.checkoutUrl : cfg?.checkoutUrl?.annual;
+      let checkout = plan === 'lifetime' ? cfg?.checkoutUrl : cfg?.checkoutUrl?.annual;
       if (plan !== 'free' && checkout) {
+        // Stamp this account onto the checkout link so the webhook attributes
+        // the purchase back to them regardless of the email they pay with.
+        if (user) {
+          const sep = checkout.includes('?') ? '&' : '?';
+          checkout += `${sep}metadata[ll_uid]=${encodeURIComponent(user.id)}&metadata[ll_email]=${encodeURIComponent(user.email)}`;
+        }
         window.location.href = checkout;
         return;
       }

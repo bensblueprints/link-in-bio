@@ -47,16 +47,26 @@ function verifyWhopSignature(req, secret) {
   );
 }
 
-// Whop's delivered payload shape isn't fully confirmed against a live event
-// yet (docs didn't expose a full example at build time) — parse defensively
-// across the field-name variants Whop's API is known to use elsewhere.
+// Real Whop V2 webhook shape (confirmed against docs): the event name is in
+// `type` (e.g. "membership.activated"/"membership.deactivated"/"payment.succeeded"),
+// the buyer email is at `data.user.email`, and the plan is at `data.plan.id`.
+// We still read the flatter variants defensively so both the API's other
+// shapes and our own smoke-test payloads parse the same way.
+//
+// Attribution: the most reliable signal is metadata we ourselves attach to the
+// checkout link (metadata[ll_uid] / metadata[ll_email]) which Whop returns in
+// data.metadata — that removes any dependence on the buyer using the same
+// email on Whop as on LinkLeaf. Email is the fallback when metadata is absent.
 function parseWhopEvent(body) {
   const action = body.action || body.type || body.event || null;
   const data = body.data || body.object || body;
-  const email = data.email || data.user?.email || data.member?.email || data.metadata?.email || null;
+  const metadata = data.metadata || body.metadata || {};
+  const email =
+    metadata.ll_email || data.email || data.user_email || data.user?.email || data.member?.email || null;
   const planId = data.plan_id || data.plan?.id || data.plan || null;
-  const membershipId = data.id || data.membership_id || null;
-  return { action, email, planId, membershipId, raw: body };
+  const membershipId = data.id || data.membership_id || data.membership?.id || null;
+  const userId = metadata.ll_uid || null;
+  return { action, email, planId, membershipId, userId, metadata, raw: body };
 }
 
 module.exports = { verifyWhopSignature, parseWhopEvent };

@@ -59,6 +59,17 @@ async function claimLifetimeSeat(userId) {
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
+    // Idempotent per user: Whop can fire both membership.activated and
+    // payment.succeeded for a single purchase — a buyer who already holds a
+    // seat must not consume a second one from the 100-seat cap.
+    const { rows: existing } = await client.query(
+      'SELECT * FROM users WHERE id = $1 AND lifetime_seat_no IS NOT NULL',
+      [userId]
+    );
+    if (existing[0]) {
+      await client.query('COMMIT');
+      return existing[0];
+    }
     const { rows: countRows } = await client.query('SELECT COUNT(*)::int AS n FROM users WHERE lifetime_seat_no IS NOT NULL');
     if (countRows[0].n >= 100) {
       await client.query('ROLLBACK');

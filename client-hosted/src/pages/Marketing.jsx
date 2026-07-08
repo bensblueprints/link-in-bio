@@ -21,6 +21,15 @@ export default function Marketing({ scrollToPricing }) {
   const order = ['free', 'starter', 'pro', 'premium', 'lifetime'];
   const loggedIn = !!user;
 
+  // Stamp the logged-in account onto the Whop checkout link so the webhook can
+  // attribute the purchase back to this exact user even if they pay with a
+  // different email on Whop. Whop returns these in the webhook's data.metadata.
+  function withAttribution(href) {
+    if (!href || !user) return href;
+    const sep = href.includes('?') ? '&' : '?';
+    return `${href}${sep}metadata[ll_uid]=${encodeURIComponent(user.id)}&metadata[ll_email]=${encodeURIComponent(user.email)}`;
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950">
       <header className="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between">
@@ -137,7 +146,7 @@ export default function Marketing({ scrollToPricing }) {
                     )
                   ) : loggedIn ? (
                     <a
-                      href={checkoutHref || '#'}
+                      href={withAttribution(checkoutHref) || '#'}
                       target="_blank"
                       rel="noreferrer"
                       className="mt-5 text-center px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer"

@@ -125,15 +125,16 @@ function createMultiApp(opts = {}) {
     }
 
     const evt = whop.parseWhopEvent(req.body || {});
-    console.log('whop webhook received:', JSON.stringify({ action: evt.action, email: evt.email, planId: evt.planId }));
+    console.log('whop webhook received:', JSON.stringify({ action: evt.action, userId: evt.userId, email: evt.email, planId: evt.planId }));
 
-    if (!evt.email) {
-      console.warn('whop webhook: no email found in payload, cannot attribute to a user', JSON.stringify(evt.raw));
-      return res.status(200).json({ ok: true, note: 'no attributable email, ignored' });
-    }
-    const user = await db.findUserByEmail(evt.email);
+    // Attribute the purchase to a LinkLeaf account. Prefer the ll_uid we
+    // stamped onto the checkout link (immune to email mismatches); fall back to
+    // matching the buyer's Whop email against their LinkLeaf signup email.
+    let user = null;
+    if (evt.userId) user = await db.findUserById(evt.userId);
+    if (!user && evt.email) user = await db.findUserByEmail(evt.email);
     if (!user) {
-      console.warn(`whop webhook: no LinkLeaf account for email ${evt.email}`);
+      console.warn(`whop webhook: could not attribute to an account (uid=${evt.userId}, email=${evt.email})`, JSON.stringify(evt.raw));
       return res.status(200).json({ ok: true, note: 'no matching account' });
     }
 

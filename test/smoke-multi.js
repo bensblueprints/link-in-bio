@@ -111,22 +111,36 @@ async function signupAndOnboard(base, jarName, username) {
     assert.strictEqual(r.status, 403, 'free plan rejected for email-collect block');
     ok('gating: free plan cannot create email-collect blocks');
 
-    // --- Whop webhook flips plan (real payload shape: action + data.email + data.plan_id) ---
+    // --- Whop webhook flips plan (REAL Whop V2 shape: type + data.user.email + data.plan.id) ---
     r = await fetch(base + '/api/webhooks/whop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'payment.succeeded', data: { email: 'alice@example.com', plan_id: 'plan_WrmNEgf50wZlr' } })
+      body: JSON.stringify({ type: 'membership.activated', data: { id: 'mem_x', user: { email: 'alice@example.com' }, plan: { id: 'plan_WrmNEgf50wZlr' } } })
     });
     assert.strictEqual(r.status, 200);
     const webhookResult = await r.json();
     assert.strictEqual(webhookResult.plan, 'pro');
-    ok('Whop webhook payload (real plan_id -> pro) updates user plan');
+    ok('Whop webhook (real nested shape: data.user.email + data.plan.id) updates plan');
+
+    // --- metadata attribution: a purchase with a DIFFERENT Whop email but our
+    //     ll_uid stamped on it still lands on the right account ---
+    r = await fetch(base + '/api/webhooks/whop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'membership.activated', data: { user: { email: 'someone-else@whop.com' }, plan: { id: 'plan_o0L8rW8pSDIYR' }, metadata: { ll_uid: alice.user.id } } })
+    });
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual((await r.json()).plan, 'premium', 'll_uid metadata attributes to alice despite a mismatched Whop email');
+    ok('Whop webhook attributes by ll_uid metadata even when the paying email differs');
+    // put alice back on pro for the rest of the test
+    await fetch(base + '/api/webhooks/whop', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'membership.activated', data: { user: { email: 'alice@example.com' }, plan: { id: 'plan_WrmNEgf50wZlr' } } }) });
 
     // --- lifetime seat claim via webhook ---
     r = await fetch(base + '/api/webhooks/whop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'payment.succeeded', data: { email: 'bob@example.com', plan_id: 'plan_lkIBJQ5RX2xdA' } })
+      body: JSON.stringify({ type: 'membership.activated', data: { user: { email: 'bob@example.com' }, plan: { id: 'plan_lkIBJQ5RX2xdA' } } })
     });
     assert.strictEqual(r.status, 200);
     const lifetimeResult = await r.json();
@@ -134,11 +148,22 @@ async function signupAndOnboard(base, jarName, username) {
     assert.strictEqual(lifetimeResult.seat, 1, 'first lifetime purchase gets seat 1');
     ok('Whop webhook grants and seat-numbers a lifetime purchase');
 
+    // --- lifetime idempotency: Whop firing BOTH membership.activated and
+    //     payment.succeeded for one purchase must not burn a second seat ---
+    r = await fetch(base + '/api/webhooks/whop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'payment.succeeded', data: { user: { email: 'bob@example.com' }, plan: { id: 'plan_lkIBJQ5RX2xdA' } } })
+    });
+    const dupLifetime = await r.json();
+    assert.strictEqual(dupLifetime.seat, 1, 'a duplicate lifetime event keeps the same seat, not a new one');
+    ok('lifetime seat claim is idempotent across duplicate Whop events');
+
     // --- membership.deactivated downgrades to free ---
     r = await fetch(base + '/api/webhooks/whop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'membership.deactivated', data: { email: 'alice@example.com', plan_id: 'plan_WrmNEgf50wZlr' } })
+      body: JSON.stringify({ type: 'membership.deactivated', data: { user: { email: 'alice@example.com' }, plan: { id: 'plan_WrmNEgf50wZlr' } } })
     });
     const downgraded = await r.json();
     assert.strictEqual(downgraded.plan, 'free');
@@ -148,7 +173,7 @@ async function signupAndOnboard(base, jarName, username) {
     await fetch(base + '/api/webhooks/whop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'payment.succeeded', data: { email: 'alice@example.com', plan_id: 'plan_WrmNEgf50wZlr' } })
+      body: JSON.stringify({ type: 'membership.activated', data: { user: { email: 'alice@example.com' }, plan: { id: 'plan_WrmNEgf50wZlr' } } })
     });
 
     // now email-collect should be allowed post-upgrade
