@@ -7,8 +7,6 @@
 services:
   app:
     build: .
-    ports:
-      - "5307:5307"
     environment:
       - PORT=5307
       - APP_MODE=multi
@@ -23,6 +21,37 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - default
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+
+      # HTTP -> HTTPS redirect
+      - "traefik.http.routers.linkleaf-http.rule=Host(`linkleaf.im`) || Host(`www.linkleaf.im`)"
+      - "traefik.http.routers.linkleaf-http.entrypoints=http"
+      - "traefik.http.routers.linkleaf-http.middlewares=linkleaf-https-redirect"
+      - "traefik.http.middlewares.linkleaf-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.linkleaf-https-redirect.redirectscheme.permanent=true"
+
+      # www -> apex redirect
+      - "traefik.http.routers.linkleaf-www.rule=Host(`www.linkleaf.im`)"
+      - "traefik.http.routers.linkleaf-www.entrypoints=https"
+      - "traefik.http.routers.linkleaf-www.tls=true"
+      - "traefik.http.routers.linkleaf-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.linkleaf-www.middlewares=linkleaf-www-redirect"
+      - "traefik.http.middlewares.linkleaf-www-redirect.redirectregex.regex=^https?://www\\.linkleaf\\.im/(.*)"
+      - "traefik.http.middlewares.linkleaf-www-redirect.redirectregex.replacement=https://linkleaf.im/$${1}"
+      - "traefik.http.middlewares.linkleaf-www-redirect.redirectregex.permanent=true"
+
+      # Apex
+      - "traefik.http.routers.linkleaf.rule=Host(`linkleaf.im`)"
+      - "traefik.http.routers.linkleaf.entrypoints=https"
+      - "traefik.http.routers.linkleaf.tls=true"
+      - "traefik.http.routers.linkleaf.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.linkleaf.service=linkleaf-svc"
+      - "traefik.http.services.linkleaf-svc.loadbalancer.server.port=5307"
 
   db:
     image: postgres:16-alpine
@@ -42,3 +71,7 @@ services:
 volumes:
   linkleaf-hosted-data:
   linkleaf-hosted-db:
+
+networks:
+  coolify:
+    external: true
