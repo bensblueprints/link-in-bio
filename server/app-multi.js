@@ -217,11 +217,11 @@ function createMultiApp(opts = {}) {
     if (f.type === 'email' && !gating.canUseEmailCollect(req.user.plan)) {
       return res.status(403).json({ error: 'Email-collect blocks require the Starter plan or higher' });
     }
-    if (f.type === 'youtube') {
+    if (f.type === 'youtube' || f.type === 'video' || f.type === 'vimeo') {
       const existing = await db.listBlocks(req.page.id);
-      const ytCount = existing.filter((b) => b.type === 'youtube').length;
-      if (!gating.canAddYoutubeBlock(req.user.plan, ytCount)) {
-        return res.status(403).json({ error: 'Free plan is limited to 1 YouTube embed — upgrade for unlimited' });
+      const videoCount = existing.filter((b) => b.type === 'youtube' || b.type === 'video' || b.type === 'vimeo').length;
+      if (!gating.canAddYoutubeBlock(req.user.plan, videoCount)) {
+        return res.status(403).json({ error: 'Free plan is limited to 1 video embed — upgrade for unlimited' });
       }
     }
     res.status(201).json(await db.createBlock(req.page.id, f));

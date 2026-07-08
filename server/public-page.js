@@ -169,10 +169,14 @@ function renderBlock(b, basePath) {
     return `<div class="block-header">${esc(b.title)}</div>`;
   }
 
-  if (b.type === 'youtube') {
-    const id = youtubeId(b.url);
-    if (!id) return '';
-    return `<div class="block-embed ratio-16-9"><iframe src="https://www.youtube-nocookie.com/embed/${esc(id)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`;
+  // Generic video embed — auto-detects YouTube or Vimeo from the pasted URL.
+  // (The dedicated 'youtube'/'vimeo' types below still work for anyone using them.)
+  if (b.type === 'video' || b.type === 'youtube') {
+    const yt = youtubeId(b.url);
+    if (yt) return `<div class="block-embed ratio-16-9"><iframe src="https://www.youtube-nocookie.com/embed/${esc(yt)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`;
+    const vm = vimeoId(b.url);
+    if (vm) return `<div class="block-embed ratio-16-9"><iframe src="https://player.vimeo.com/video/${esc(vm)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+    return ''; // no recognizable video id yet
   }
 
   if (b.type === 'vimeo') {

@@ -18,7 +18,7 @@ const ICONS = {
 // Types that just need a plain URL (rendered as a styled link card on the public page).
 const LINK_STYLE_TYPES = new Set(['link', 'maps', 'gofundme', 'discord', 'whatsapp', 'tour_events', 'instagram', 'tiktok']);
 // Types rendered as an iframe embed.
-const EMBED_TYPES = new Set(['vimeo', 'spotify', 'soundcloud', 'calendly', 'typeform']);
+const EMBED_TYPES = new Set(['video', 'vimeo', 'spotify', 'soundcloud', 'calendly', 'typeform']);
 
 function toLocalInput(iso) {
   if (!iso) return '';
@@ -82,8 +82,12 @@ function Editor({ block, onSave, onCancel }) {
           </div>
           {(isLinkStyle || b.type === 'youtube' || isEmbed) && (
             <div>
-              <label>URL</label>
-              <input value={b.url} onChange={(e) => set('url', e.target.value)} placeholder="https://…" />
+              <label>{b.type === 'video' ? 'YouTube or Vimeo link' : 'URL'}</label>
+              <input
+                value={b.url}
+                onChange={(e) => set('url', e.target.value)}
+                placeholder={b.type === 'video' ? 'https://youtube.com/watch?v=… or https://vimeo.com/…' : 'https://…'}
+              />
             </div>
           )}
         </div>
