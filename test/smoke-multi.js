@@ -33,7 +33,7 @@ async function signupAndOnboard(base, jarName, username) {
       plan: 'free',
       theme: 'dark',
       profile: { display_name: jarName, bio: `Bio for ${jarName}` },
-      links: [{ platform: 'website', value: `https://example.com/${jarName}` }]
+      links: [{ platform: 'website', value: `https://example.com/${username}` }]
     })
   });
   assert.strictEqual(r.status, 201, `onboarding complete for ${jarName}`);

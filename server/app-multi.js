@@ -70,6 +70,37 @@ function createMultiApp(opts = {}) {
     res.status(201).json(page);
   });
 
+  // ================= PUBLIC API (must be registered before the dash router
+  // below — dash is mounted at the /api prefix and its auth middleware runs
+  // for every /api/* request regardless of route match, so anything public
+  // under /api/* has to win the route match first) =================
+  app.get('/api/plans', (req, res) => {
+    res.json({ plans: gating.PLANS, order: gating.PLAN_ORDER, themes: THEMES });
+  });
+
+  app.post('/api/public/subscribe', async (req, res) => {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const pageId = req.body?.page_id;
+    const blockId = req.body?.block_id || null;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
+    if (!pageId) return res.status(400).json({ error: 'Missing page' });
+    await db.addSubscriber(pageId, blockId, email);
+    res.json({ ok: true, message: "You're on the list! 🎉" });
+  });
+
+  app.post('/api/webhooks/whop', async (req, res) => {
+    // TODO: verify Whop signature header once WHOP_WEBHOOK_SECRET is set from the created products.
+    const { user_id: userId, plan, event, whop_customer_id: whopCustomerId, whop_subscription_id: whopSubscriptionId } = req.body || {};
+    if (!userId) return res.status(400).json({ error: 'missing user_id' });
+    if (event === 'lifetime_purchase') {
+      const updated = await db.claimLifetimeSeat(userId);
+      if (!updated) return res.status(409).json({ error: 'Founder lifetime seats are sold out' });
+      return res.json({ ok: true, plan: updated.plan, seat: updated.lifetime_seat_no });
+    }
+    const updated = await db.setUserPlan(userId, plan || 'free', { whopCustomerId, whopSubscriptionId });
+    res.json({ ok: true, plan: updated.plan });
+  });
+
   // ================= DASHBOARD API (auth + page required) =================
   const dash = express.Router();
   dash.use(auth.requireAuth, auth.requirePage);
@@ -174,40 +205,12 @@ function createMultiApp(opts = {}) {
   // calls (/api/settings, /api/blocks, /api/subscribers.csv, ...) work unchanged
   app.use('/api', dash);
 
-  // ================= BILLING (Whop webhook — same pattern as GotBeef/Airwallex) =================
-  app.post('/api/webhooks/whop', express.json({ limit: '256kb' }), async (req, res) => {
-    // TODO: verify Whop signature header once WHOP_WEBHOOK_SECRET is set from the created products.
-    const { user_id: userId, plan, event, whop_customer_id: whopCustomerId, whop_subscription_id: whopSubscriptionId } = req.body || {};
-    if (!userId) return res.status(400).json({ error: 'missing user_id' });
-    if (event === 'lifetime_purchase') {
-      const updated = await db.claimLifetimeSeat(userId);
-      if (!updated) return res.status(409).json({ error: 'Founder lifetime seats are sold out' });
-      return res.json({ ok: true, plan: updated.plan, seat: updated.lifetime_seat_no });
-    }
-    const updated = await db.setUserPlan(userId, plan || 'free', { whopCustomerId, whopSubscriptionId });
-    res.json({ ok: true, plan: updated.plan });
-  });
-
   // ================= PUBLIC =================
   app.get('/r/:id', async (req, res) => {
     const block = await db.findBlockById(req.params.id);
     if (!block || block.type !== 'link' || !block.url || !isBlockLive(block)) return res.redirect('/');
     await db.recordClick(block.id);
     res.redirect(block.url);
-  });
-
-  app.get('/api/plans', (req, res) => {
-    res.json({ plans: gating.PLANS, order: gating.PLAN_ORDER, themes: THEMES });
-  });
-
-  app.post('/api/public/subscribe', async (req, res) => {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const pageId = req.body?.page_id;
-    const blockId = req.body?.block_id || null;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
-    if (!pageId) return res.status(400).json({ error: 'Missing page' });
-    await db.addSubscriber(pageId, blockId, email);
-    res.json({ ok: true, message: "You're on the list! 🎉" });
   });
 
   const RESERVED_TOP_LEVEL = new Set(['login', 'signup', 'onboarding', 'dashboard', 'pricing', 'uploads', 'api', 'r', 'assets']);
