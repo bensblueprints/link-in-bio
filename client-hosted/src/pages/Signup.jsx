@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../api';
 import { useAuth } from '../AuthContext.jsx';
 import Logo from '../components/Logo.jsx';
 
 export default function Signup() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
   const { setUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +20,10 @@ export default function Signup() {
     try {
       const u = await authApi.signup(email, password);
       setUser(u);
-      nav('/onboarding');
+      // Carry the plan picked on the pricing page through to onboarding so
+      // the wizard doesn't ask again — see Marketing.jsx's "Get started" links.
+      const plan = params.get('plan');
+      nav(plan ? `/onboarding?plan=${encodeURIComponent(plan)}` : '/onboarding');
     } catch (e2) {
       setErr(e2.message);
     } finally {

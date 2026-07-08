@@ -6,7 +6,7 @@ import { Card } from './ui.jsx';
 function Stat({ icon: Icon, label, value, suffix = '' }) {
   return (
     <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-violet-600/15 text-violet-400 flex items-center justify-center shrink-0">
+      <div className="w-10 h-10 rounded-xl bg-orange-600/15 text-orange-400 flex items-center justify-center shrink-0">
         <Icon size={18} />
       </div>
       <div>
@@ -24,7 +24,7 @@ function Chart({ days }) {
       <div className="flex items-end gap-[3px] h-36">
         {days.map((d) => (
           <div key={d.date} className="flex-1 flex items-end gap-[2px] group relative" title={`${d.date}: ${d.views} views, ${d.clicks} clicks`}>
-            <div className="flex-1 bg-violet-500/70 rounded-t-sm min-h-[2px] transition-colors group-hover:bg-violet-400" style={{ height: `${(d.views / max) * 100}%` }} />
+            <div className="flex-1 bg-orange-500/70 rounded-t-sm min-h-[2px] transition-colors group-hover:bg-orange-400" style={{ height: `${(d.views / max) * 100}%` }} />
             <div className="flex-1 bg-emerald-500/70 rounded-t-sm min-h-[2px] transition-colors group-hover:bg-emerald-400" style={{ height: `${(d.clicks / max) * 100}%` }} />
           </div>
         ))}
@@ -34,7 +34,7 @@ function Chart({ days }) {
         <span>{days[days.length - 1]?.date}</span>
       </div>
       <div className="flex gap-4 mt-2 text-xs text-zinc-400">
-        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-500/70" /> Views</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-orange-500/70" /> Views</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/70" /> Clicks</span>
       </div>
     </div>

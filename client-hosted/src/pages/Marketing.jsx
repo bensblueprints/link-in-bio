@@ -84,7 +84,7 @@ export default function Marketing({ scrollToPricing }) {
                     {!p.showBadge && <li className="flex gap-2"><Check size={15} className="text-emerald-400 shrink-0 mt-0.5" /> No LinkLeaf badge</li>}
                   </ul>
                   <Link
-                    to="/signup"
+                    to={`/signup?plan=${key}`}
                     className="mt-5 text-center px-4 py-2.5 rounded-lg text-sm font-semibold cursor-pointer"
                     style={{ background: featured ? 'var(--ll-orange)' : '#27272a', color: '#fff' }}
                   >

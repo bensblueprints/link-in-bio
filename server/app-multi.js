@@ -52,13 +52,18 @@ function createMultiApp(opts = {}) {
   });
 
   app.post('/api/onboarding/complete', auth.requireAuth, async (req, res) => {
-    const { username, plan, theme, profile, links } = req.body || {};
+    const { username, plan: requestedPlan, theme, profile, links } = req.body || {};
     if (!db.isValidUsername(username)) return res.status(400).json({ error: 'Invalid username' });
     if (!(await db.usernameAvailable(username))) return res.status(409).json({ error: 'Username already taken' });
     const existing = await db.findPageByUserId(req.user.id);
     if (existing) return res.status(409).json({ error: 'You already have a page' });
 
-    const chosenTheme = gating.allowedThemes(plan === 'free' || !plan ? 'free' : plan).includes(theme) ? theme : gating.allowedThemes('free')[0];
+    // No Whop checkout is wired up yet — a paid plan is only ever granted by
+    // the /api/webhooks/whop handler after a real purchase. Onboarding always
+    // publishes on Free regardless of what was picked in the wizard, so we
+    // never hand out Starter/Pro/Premium/Lifetime for nothing.
+    const plan = 'free';
+    const chosenTheme = gating.allowedThemes(plan).includes(theme) ? theme : gating.allowedThemes(plan)[0];
     const page = await db.completeOnboarding({
       userId: req.user.id,
       username,
@@ -67,7 +72,7 @@ function createMultiApp(opts = {}) {
       profile: profile || {},
       links: Array.isArray(links) ? links : []
     });
-    res.status(201).json(page);
+    res.status(201).json({ ...page, requestedPlan });
   });
 
   // ================= PUBLIC API (must be registered before the dash router

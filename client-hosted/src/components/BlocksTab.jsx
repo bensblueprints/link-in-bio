@@ -5,7 +5,7 @@ import { api } from '../api';
 import { Card, Button, ImageUpload, Toggle } from './ui.jsx';
 
 const TYPE_META = {
-  link: { label: 'Link', icon: LinkIcon, color: 'text-violet-400' },
+  link: { label: 'Link', icon: LinkIcon, color: 'text-orange-400' },
   header: { label: 'Header', icon: Heading, color: 'text-sky-400' },
   youtube: { label: 'YouTube', icon: Youtube, color: 'text-red-400' },
   email: { label: 'Email collect', icon: Mail, color: 'text-emerald-400' }

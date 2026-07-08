@@ -18,7 +18,7 @@ export function Card({ title, children, actions }) {
 
 export function Button({ children, variant = 'primary', className = '', ...props }) {
   const styles = {
-    primary: 'bg-violet-600 hover:bg-violet-500 text-white',
+    primary: 'bg-orange-600 hover:bg-orange-500 text-white',
     ghost: 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200',
     danger: 'bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-800'
   };
@@ -69,7 +69,7 @@ export function ImageUpload({ value, onChange, label = 'Upload image', round = f
           <button
             onClick={() => ref.current?.click()}
             disabled={busy}
-            className={`w-16 h-16 flex items-center justify-center border-2 border-dashed border-zinc-700 hover:border-violet-500 text-zinc-500 hover:text-violet-400 transition-colors cursor-pointer ${round ? 'rounded-full' : 'rounded-lg'}`}
+            className={`w-16 h-16 flex items-center justify-center border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors cursor-pointer ${round ? 'rounded-full' : 'rounded-lg'}`}
             title={label}
           >
             <Upload size={18} />
@@ -86,7 +86,7 @@ export function ImageUpload({ value, onChange, label = 'Upload image', round = f
 export function Toggle({ checked, onChange, label }) {
   return (
     <button onClick={() => onChange(!checked)} className="flex items-center gap-2 cursor-pointer group" type="button">
-      <span className={`w-9 h-5 rounded-full transition-colors relative ${checked ? 'bg-violet-600' : 'bg-zinc-700'}`}>
+      <span className={`w-9 h-5 rounded-full transition-colors relative ${checked ? 'bg-orange-600' : 'bg-zinc-700'}`}>
         <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${checked ? 'left-[18px]' : 'left-0.5'}`} />
       </span>
       {label && <span className="text-sm text-zinc-300 group-hover:text-white">{label}</span>}

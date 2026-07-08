@@ -56,7 +56,7 @@ export default function Dashboard() {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
-              tab === t.id ? 'bg-violet-600/90 text-white' : 'text-zinc-400 hover:text-zinc-200'
+              tab === t.id ? 'bg-orange-600/90 text-white' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <t.icon size={15} />

@@ -17,7 +17,10 @@ export default function ProfileTab() {
 
   if (!s || !meta) return <p className="text-zinc-500">Loading…</p>;
 
+  // Postgres returns `socials` as a real object (jsonb), unlike the self-host
+  // product's SQLite TEXT column — only parse if it actually arrives as a string.
   const socials = (() => {
+    if (s.socials && typeof s.socials === 'object') return s.socials;
     try { return JSON.parse(s.socials || '{}'); } catch { return {}; }
   })();
 
@@ -67,7 +70,7 @@ export default function ProfileTab() {
               <label>{label}</label>
               <input
                 value={socials[key] || ''}
-                onChange={(e) => set('socials', JSON.stringify({ ...socials, [key]: e.target.value }))}
+                onChange={(e) => set('socials', { ...socials, [key]: e.target.value })}
                 placeholder={`https://…`}
               />
             </div>

@@ -48,7 +48,7 @@ export default function ThemeTab() {
               <button
                 key={t}
                 onClick={() => set('theme', t)}
-                className={`rounded-xl overflow-hidden border-2 text-left transition-all cursor-pointer ${active ? 'border-violet-500 ring-2 ring-violet-500/30' : 'border-zinc-800 hover:border-zinc-600'}`}
+                className={`rounded-xl overflow-hidden border-2 text-left transition-all cursor-pointer ${active ? 'border-orange-500 ring-2 ring-orange-500/30' : 'border-zinc-800 hover:border-zinc-600'}`}
               >
                 <div className="h-20 flex flex-col items-center justify-center gap-1.5 px-4" style={{ background: p.bg }}>
                   <div className="w-full h-3 rounded-full opacity-90" style={{ background: p.fg === '#18181b' || p.fg === '#292524' ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.25)' }} />
@@ -56,7 +56,7 @@ export default function ThemeTab() {
                 </div>
                 <div className="px-3 py-2 bg-zinc-900">
                   <div className="text-sm font-semibold capitalize flex items-center gap-1.5">
-                    {t} {active && <Check size={13} className="text-violet-400" />}
+                    {t} {active && <Check size={13} className="text-orange-400" />}
                   </div>
                   <div className="text-[11px] text-zinc-500">{p.desc}</div>
                 </div>
@@ -116,7 +116,7 @@ export default function ThemeTab() {
               key={key}
               onClick={() => set('font', key)}
               className={`px-3 py-2.5 rounded-lg border text-sm text-left transition-colors cursor-pointer ${
-                s.font === key ? 'border-violet-500 bg-violet-500/10 text-white' : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-600'
+                s.font === key ? 'border-orange-500 bg-orange-500/10 text-white' : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-600'
               }`}
             >
               {label}

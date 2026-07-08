@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Check, Loader2, Instagram, Facebook, Youtube, Twitter, Globe, MessageCircle, Music2, ChevronLeft } from 'lucide-react';
 import { onboardingApi } from '../api';
 import Logo from '../components/Logo.jsx';
 
-const STEPS = ['username', 'plan', 'theme', 'links', 'profile'];
+const STEPS_FULL = ['username', 'plan', 'theme', 'links', 'profile'];
+const STEPS_PLAN_PRESET = ['username', 'theme', 'links', 'profile'];
+const VALID_PLAN_KEYS = new Set(['free', 'starter', 'pro', 'premium', 'lifetime']);
 
 const PLATFORMS = [
   { key: 'instagram', label: 'Instagram', icon: Instagram, placeholder: '@username' },
@@ -26,8 +28,8 @@ const THEME_PREVIEWS = {
   paper: { bg: '#f5f0e8', desc: 'Neo-brutalist paper' }
 };
 
-function ProgressBar({ step }) {
-  const pct = ((STEPS.indexOf(step) + 1) / STEPS.length) * 100;
+function ProgressBar({ step, steps }) {
+  const pct = ((steps.indexOf(step) + 1) / steps.length) * 100;
   return (
     <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-8">
       <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: 'var(--ll-orange)' }} />
@@ -250,9 +252,16 @@ function StepProfile({ profile, onChange, onBack, onSubmit, busy }) {
 
 export default function Onboarding() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  // A plan chosen on the marketing pricing page arrives as ?plan=pro — skip
+  // asking again in the wizard (was the "makes me choose the plan twice" bug).
+  const presetPlan = params.get('plan');
+  const hasPresetPlan = presetPlan && VALID_PLAN_KEYS.has(presetPlan);
+  const STEPS = hasPresetPlan ? STEPS_PLAN_PRESET : STEPS_FULL;
+
   const [step, setStep] = useState('username');
   const [username, setUsername] = useState('');
-  const [plan, setPlan] = useState('free');
+  const [plan, setPlan] = useState(hasPresetPlan ? presetPlan : 'free');
   const [theme, setTheme] = useState('gradient');
   const [links, setLinks] = useState({});
   const [profile, setProfile] = useState({ display_name: '', bio: '' });
@@ -284,7 +293,7 @@ export default function Onboarding() {
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-lg">
         <div className="mb-8"><Logo /></div>
-        <ProgressBar step={step} />
+        <ProgressBar step={step} steps={STEPS} />
         {err && <p className="text-red-400 text-sm mb-4">{err}</p>}
         {step === 'username' && <StepUsername value={username} onChange={setUsername} onNext={() => goTo(idx + 1)} />}
         {step === 'plan' && <StepPlan value={plan} onChange={setPlan} onNext={() => goTo(idx + 1)} onBack={() => goTo(idx - 1)} />}
