@@ -111,16 +111,45 @@ async function signupAndOnboard(base, jarName, username) {
     assert.strictEqual(r.status, 403, 'free plan rejected for email-collect block');
     ok('gating: free plan cannot create email-collect blocks');
 
-    // --- Whop webhook flips plan ---
+    // --- Whop webhook flips plan (real payload shape: action + data.email + data.plan_id) ---
     r = await fetch(base + '/api/webhooks/whop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: alice.user.id, plan: 'pro' })
+      body: JSON.stringify({ action: 'payment.succeeded', data: { email: 'alice@example.com', plan_id: 'plan_WrmNEgf50wZlr' } })
     });
     assert.strictEqual(r.status, 200);
     const webhookResult = await r.json();
     assert.strictEqual(webhookResult.plan, 'pro');
-    ok('Whop webhook payload updates user plan');
+    ok('Whop webhook payload (real plan_id -> pro) updates user plan');
+
+    // --- lifetime seat claim via webhook ---
+    r = await fetch(base + '/api/webhooks/whop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'payment.succeeded', data: { email: 'bob@example.com', plan_id: 'plan_lkIBJQ5RX2xdA' } })
+    });
+    assert.strictEqual(r.status, 200);
+    const lifetimeResult = await r.json();
+    assert.strictEqual(lifetimeResult.plan, 'lifetime');
+    assert.strictEqual(lifetimeResult.seat, 1, 'first lifetime purchase gets seat 1');
+    ok('Whop webhook grants and seat-numbers a lifetime purchase');
+
+    // --- membership.deactivated downgrades to free ---
+    r = await fetch(base + '/api/webhooks/whop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'membership.deactivated', data: { email: 'alice@example.com', plan_id: 'plan_WrmNEgf50wZlr' } })
+    });
+    const downgraded = await r.json();
+    assert.strictEqual(downgraded.plan, 'free');
+    ok('membership.deactivated downgrades to free');
+
+    // re-upgrade alice for the rest of the test
+    await fetch(base + '/api/webhooks/whop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'payment.succeeded', data: { email: 'alice@example.com', plan_id: 'plan_WrmNEgf50wZlr' } })
+    });
 
     // now email-collect should be allowed post-upgrade
     r = await fetch(base + '/api/blocks', {
@@ -130,6 +159,27 @@ async function signupAndOnboard(base, jarName, username) {
     });
     assert.strictEqual(r.status, 201, 'email-collect allowed after upgrade to pro');
     ok('gating unlocks after plan upgrade');
+
+    // --- new block catalog: metadata round-trips and renders on the public page ---
+    r = await fetch(base + '/api/blocks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', cookie: alice.cookie },
+      body: JSON.stringify({ type: 'faq', metadata: { items: [{ q: 'Do you ship?', a: 'Yes, worldwide.' }] } })
+    });
+    assert.strictEqual(r.status, 201);
+    const faqBlock = await r.json();
+    assert.deepStrictEqual(faqBlock.metadata.items, [{ q: 'Do you ship?', a: 'Yes, worldwide.' }], 'faq metadata round-trips');
+
+    r = await fetch(base + '/alice-smoke');
+    html = await r.text();
+    assert(html.includes('Do you ship?'), 'faq block renders on the public page');
+    ok('new block type (faq) persists metadata and renders publicly');
+
+    r = await fetch(base + '/api/plans');
+    const plansResp = await r.json();
+    assert.strictEqual(plansResp.plans.pro.checkoutUrl.monthly, 'https://whop.com/checkout/plan_WrmNEgf50wZlr');
+    assert.strictEqual(plansResp.plans.lifetime.checkoutUrl, 'https://whop.com/checkout/plan_lkIBJQ5RX2xdA');
+    ok('/api/plans exposes real Whop checkout URLs');
 
     console.log(`\nAll ${passed} multi-tenant smoke checks passed.`);
     process.exitCode = 0;

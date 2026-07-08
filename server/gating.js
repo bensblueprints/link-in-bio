@@ -4,6 +4,9 @@
 
 const PLAN_ORDER = ['free', 'starter', 'pro', 'premium', 'lifetime'];
 
+// Whop product: prod_fXs0WCs4Pezgr ("Link Leaf"), biz_Ro2hWjwgeK5rm8. Plan IDs
+// confirmed live against the Whop API 2026-07-08 — checkoutUrl is each plan's
+// real https://whop.com/checkout/<plan_id> direct link.
 const PLANS = {
   free: {
     label: 'Free',
@@ -13,7 +16,8 @@ const PLANS = {
     unlimitedYoutube: false,
     emailCollect: false,
     customStyling: false,
-    showBadge: true
+    showBadge: true,
+    whopPlanId: 'plan_8WtlHkDEIlvTA'
   },
   starter: {
     label: 'Starter',
@@ -23,7 +27,8 @@ const PLANS = {
     unlimitedYoutube: true,
     emailCollect: true,
     customStyling: false,
-    showBadge: false
+    showBadge: false,
+    whopPlanId: { monthly: 'plan_hjnTnQr3x4sYI', annual: 'plan_X6SWLvWnSl9bE' }
   },
   pro: {
     label: 'Pro',
@@ -33,7 +38,8 @@ const PLANS = {
     unlimitedYoutube: true,
     emailCollect: true,
     customStyling: true,
-    showBadge: false
+    showBadge: false,
+    whopPlanId: { monthly: 'plan_WrmNEgf50wZlr', annual: 'plan_VtvVrfyJpDAgF' }
   },
   premium: {
     label: 'Premium',
@@ -44,7 +50,8 @@ const PLANS = {
     emailCollect: true,
     customStyling: true,
     showBadge: false,
-    futureBlocks: true
+    futureBlocks: true,
+    whopPlanId: { monthly: 'plan_o0L8rW8pSDIYR', annual: 'plan_kdrhFN4jFSPH7' }
   },
   lifetime: {
     label: 'LinkLeaf Founder (Lifetime)',
@@ -55,9 +62,33 @@ const PLANS = {
     emailCollect: true,
     customStyling: true,
     showBadge: false,
-    futureBlocks: true
+    futureBlocks: true,
+    whopPlanId: 'plan_lkIBJQ5RX2xdA'
   }
 };
+
+// Reverse lookup used by the webhook handler: Whop plan_id -> { plan, billing }.
+const WHOP_PLAN_ID_TO_PLAN = {};
+for (const [key, cfg] of Object.entries(PLANS)) {
+  if (typeof cfg.whopPlanId === 'string') {
+    WHOP_PLAN_ID_TO_PLAN[cfg.whopPlanId] = { plan: key, billing: null };
+  } else if (cfg.whopPlanId) {
+    for (const [billing, id] of Object.entries(cfg.whopPlanId)) {
+      WHOP_PLAN_ID_TO_PLAN[id] = { plan: key, billing };
+    }
+  }
+}
+
+function checkoutUrl(plan, billing) {
+  const cfg = PLANS[plan];
+  if (!cfg || !cfg.whopPlanId) return null;
+  const id = typeof cfg.whopPlanId === 'string' ? cfg.whopPlanId : cfg.whopPlanId[billing || 'monthly'];
+  return id ? `https://whop.com/checkout/${id}` : null;
+}
+
+function planForWhopPlanId(whopPlanId) {
+  return WHOP_PLAN_ID_TO_PLAN[whopPlanId] || null;
+}
 
 const ALL_THEMES = ['gradient', 'glass', 'minimal', 'dark', 'neon', 'paper'];
 const FREE_YOUTUBE_CAP = 1;
@@ -103,5 +134,7 @@ module.exports = {
   canAddYoutubeBlock,
   canUseEmailCollect,
   canUseCustomStyling,
-  showBadge
+  showBadge,
+  checkoutUrl,
+  planForWhopPlanId
 };

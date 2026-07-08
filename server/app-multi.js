@@ -6,6 +6,8 @@ const multer = require('multer');
 const db = require('./db-multi');
 const auth = require('./auth');
 const gating = require('./gating');
+const blockCatalog = require('./block-catalog');
+const whop = require('./whop');
 const { renderPublicPage, FONTS, THEMES, SOCIALS, isBlockLive } = require('./public-page');
 
 function createMultiApp(opts = {}) {
@@ -14,7 +16,9 @@ function createMultiApp(opts = {}) {
 
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: '1mb' }));
+  // rawBody is captured alongside the parsed body so the Whop webhook route
+  // can verify its HMAC signature against the exact bytes Whop signed.
+  app.use(express.json({ limit: '1mb', verify: (req, res, buf) => { req.rawBody = buf; } }));
   app.use(cookieParser());
   app.use(auth.attachUser);
 
@@ -80,7 +84,21 @@ function createMultiApp(opts = {}) {
   // for every /api/* request regardless of route match, so anything public
   // under /api/* has to win the route match first) =================
   app.get('/api/plans', (req, res) => {
-    res.json({ plans: gating.PLANS, order: gating.PLAN_ORDER, themes: THEMES });
+    const plans = Object.fromEntries(
+      Object.entries(gating.PLANS).map(([key, cfg]) => [
+        key,
+        {
+          ...cfg,
+          checkoutUrl:
+            typeof cfg.whopPlanId === 'string'
+              ? gating.checkoutUrl(key)
+              : cfg.whopPlanId
+                ? { monthly: gating.checkoutUrl(key, 'monthly'), annual: gating.checkoutUrl(key, 'annual') }
+                : null
+        }
+      ])
+    );
+    res.json({ plans, order: gating.PLAN_ORDER, themes: THEMES });
   });
 
   app.post('/api/public/subscribe', async (req, res) => {
@@ -94,16 +112,49 @@ function createMultiApp(opts = {}) {
   });
 
   app.post('/api/webhooks/whop', async (req, res) => {
-    // TODO: verify Whop signature header once WHOP_WEBHOOK_SECRET is set from the created products.
-    const { user_id: userId, plan, event, whop_customer_id: whopCustomerId, whop_subscription_id: whopSubscriptionId } = req.body || {};
-    if (!userId) return res.status(400).json({ error: 'missing user_id' });
-    if (event === 'lifetime_purchase') {
-      const updated = await db.claimLifetimeSeat(userId);
-      if (!updated) return res.status(409).json({ error: 'Founder lifetime seats are sold out' });
-      return res.json({ ok: true, plan: updated.plan, seat: updated.lifetime_seat_no });
+    const secret = process.env.WHOP_WEBHOOK_SECRET;
+    if (secret) {
+      if (!whop.verifyWhopSignature(req, secret)) {
+        return res.status(401).json({ error: 'Invalid webhook signature' });
+      }
+    } else {
+      console.warn('WHOP_WEBHOOK_SECRET is not set — accepting unverified webhook payload. Set it once available from the Whop dashboard Developer tab.');
     }
-    const updated = await db.setUserPlan(userId, plan || 'free', { whopCustomerId, whopSubscriptionId });
-    res.json({ ok: true, plan: updated.plan });
+
+    const evt = whop.parseWhopEvent(req.body || {});
+    console.log('whop webhook received:', JSON.stringify({ action: evt.action, email: evt.email, planId: evt.planId }));
+
+    if (!evt.email) {
+      console.warn('whop webhook: no email found in payload, cannot attribute to a user', JSON.stringify(evt.raw));
+      return res.status(200).json({ ok: true, note: 'no attributable email, ignored' });
+    }
+    const user = await db.findUserByEmail(evt.email);
+    if (!user) {
+      console.warn(`whop webhook: no LinkLeaf account for email ${evt.email}`);
+      return res.status(200).json({ ok: true, note: 'no matching account' });
+    }
+
+    if (evt.action === 'membership.deactivated') {
+      const updated = await db.setUserPlan(user.id, 'free', {});
+      return res.json({ ok: true, plan: updated.plan });
+    }
+
+    if (evt.action === 'payment.succeeded' || evt.action === 'membership.activated' || !evt.action) {
+      const mapped = gating.planForWhopPlanId(evt.planId);
+      if (!mapped) {
+        console.warn(`whop webhook: unrecognized plan_id ${evt.planId}`);
+        return res.status(200).json({ ok: true, note: 'unrecognized plan' });
+      }
+      if (mapped.plan === 'lifetime') {
+        const updated = await db.claimLifetimeSeat(user.id);
+        if (!updated) return res.status(409).json({ error: 'Founder lifetime seats are sold out' });
+        return res.json({ ok: true, plan: updated.plan, seat: updated.lifetime_seat_no });
+      }
+      const updated = await db.setUserPlan(user.id, mapped.plan, { whopCustomerId: evt.membershipId });
+      return res.json({ ok: true, plan: updated.plan });
+    }
+
+    res.json({ ok: true, note: `unhandled action ${evt.action}` });
   });
 
   // ================= DASHBOARD API (auth + page required) =================
@@ -116,6 +167,7 @@ function createMultiApp(opts = {}) {
       allowedThemes: gating.allowedThemes(req.user.plan),
       fonts: Object.fromEntries(Object.entries(FONTS).map(([k, v]) => [k, v.label])),
       socials: Object.fromEntries(Object.entries(SOCIALS).map(([k, v]) => [k, v.label])),
+      blockCategories: blockCatalog.CATEGORIES,
       plan: req.user.plan,
       gating: gating.planConfig(req.user.plan)
     });
@@ -143,13 +195,14 @@ function createMultiApp(opts = {}) {
   });
 
   const blockFields = (b) => ({
-    type: ['link', 'header', 'youtube', 'email'].includes(b.type) ? b.type : 'link',
+    type: blockCatalog.IMPLEMENTED_TYPES.includes(b.type) ? b.type : 'link',
     title: String(b.title ?? ''),
     url: String(b.url ?? ''),
     thumbnail: String(b.thumbnail ?? ''),
     animate: !!b.animate,
     start_at: b.start_at || null,
-    end_at: b.end_at || null
+    end_at: b.end_at || null,
+    metadata: b.metadata && typeof b.metadata === 'object' ? b.metadata : {}
   });
 
   dash.get('/blocks', async (req, res) => res.json(await db.listBlocks(req.page.id)));

@@ -39,6 +39,32 @@ function youtubeId(url) {
   return m ? m[1] : null;
 }
 
+function vimeoId(url) {
+  const m = String(url || '').match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  return m ? m[1] : null;
+}
+
+// Spotify's oEmbed-free embed pattern: swap /track|album|playlist|artist/ID
+// straight into open.spotify.com/embed/... — no API key needed.
+function spotifyEmbedUrl(url) {
+  const m = String(url || '').match(/open\.spotify\.com\/(track|album|playlist|artist|episode|show)\/([A-Za-z0-9]+)/);
+  return m ? `https://open.spotify.com/embed/${m[1]}/${m[2]}` : null;
+}
+
+// SoundCloud's public player iframe accepts any track/set URL via ?url=
+function soundcloudEmbedUrl(url) {
+  if (!/soundcloud\.com\//.test(String(url || ''))) return null;
+  return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff6600&auto_play=false&show_comments=false`;
+}
+
+const ICON_LINK_LABELS = {
+  gofundme: '💚 GoFundMe',
+  discord: 'Join our Discord',
+  whatsapp: 'Chat on WhatsApp',
+  tour_events: '🎟️ Tour Dates',
+  maps: '📍 Get Directions'
+};
+
 const THEME_CSS = `
 :root { --accent: #8b5cf6; }
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -71,39 +97,57 @@ h1 { margin-top:16px; font-size:1.45rem; letter-spacing:-.01em; }
 .block-email button { padding:11px 18px; border-radius:10px; border:0; background:var(--accent); color:#fff; font:inherit; font-weight:700; cursor:pointer; transition:filter .15s; }
 .block-email button:hover { filter:brightness(1.12); }
 .block-email .msg { margin-top:10px; font-size:.85rem; min-height:1em; opacity:.85; }
+.block-text { padding:16px 18px; border-radius:14px; font-size:.95rem; line-height:1.6; }
+.block-embed { border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.25); }
+.block-embed iframe { width:100%; border:0; display:block; }
+.block-embed.ratio-16-9 { aspect-ratio:16/9; }
+.block-embed.ratio-tall { height:400px; }
+.block-embed.ratio-short { height:166px; }
+.block-faq { padding:6px 0; }
+.block-faq details { padding:14px 18px; border-radius:14px; margin-bottom:10px; }
+.block-faq summary { font-weight:600; cursor:pointer; list-style:none; }
+.block-faq summary::-webkit-details-marker { display:none; }
+.block-faq summary::after { content:'+'; float:right; opacity:.6; }
+.block-faq details[open] summary::after { content:'–'; }
+.block-faq p { margin-top:10px; font-size:.9rem; opacity:.85; line-height:1.5; }
+.block-contact { padding:16px 18px; border-radius:14px; text-align:center; }
+.block-contact h3 { font-size:1rem; margin-bottom:6px; }
+.block-contact a { display:block; font-size:.9rem; opacity:.85; text-decoration:none; margin-top:4px; }
+.block-discount { padding:16px 18px; border-radius:14px; text-align:center; }
+.block-discount .code { font-family:ui-monospace,monospace; font-size:1.1rem; font-weight:700; letter-spacing:.05em; padding:8px 14px; border-radius:8px; background:rgba(0,0,0,.15); display:inline-block; margin-top:6px; }
 .footer { margin-top:48px; font-size:.75rem; opacity:.45; text-decoration:none; color:inherit; }
 
 /* ---------- Themes ---------- */
 .theme-gradient { background:linear-gradient(160deg,#1e1b4b 0%,#4c1d95 45%,#be185d 100%); color:#fff; }
-.theme-gradient .block-link, .theme-gradient .block-email { background:rgba(255,255,255,.14); color:#fff; backdrop-filter:blur(8px); }
+.theme-gradient .block-link, .theme-gradient .block-email, .theme-gradient .block-text, .theme-gradient .block-faq details, .theme-gradient .block-contact, .theme-gradient .block-discount { background:rgba(255,255,255,.14); color:#fff; backdrop-filter:blur(8px); }
 .theme-gradient .block-link:hover { background:rgba(255,255,255,.22); }
 .theme-gradient .socials a { background:rgba(255,255,255,.14); color:#fff; }
 
 .theme-glass { background:linear-gradient(135deg,#0f172a,#134e4a 60%,#0f172a); color:#f1f5f9; }
-.theme-glass .block-link, .theme-glass .block-email { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.18); color:#f1f5f9; backdrop-filter:blur(14px); box-shadow:0 8px 32px rgba(0,0,0,.3); }
+.theme-glass .block-link, .theme-glass .block-email, .theme-glass .block-text, .theme-glass .block-faq details, .theme-glass .block-contact, .theme-glass .block-discount { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.18); color:#f1f5f9; backdrop-filter:blur(14px); box-shadow:0 8px 32px rgba(0,0,0,.3); }
 .theme-glass .block-link:hover { background:rgba(255,255,255,.13); }
 .theme-glass .socials a { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#f1f5f9; }
 
 .theme-minimal { background:#fafafa; color:#18181b; }
-.theme-minimal .block-link, .theme-minimal .block-email { background:#fff; border:1px solid #e4e4e7; color:#18181b; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.theme-minimal .block-link, .theme-minimal .block-email, .theme-minimal .block-text, .theme-minimal .block-faq details, .theme-minimal .block-contact, .theme-minimal .block-discount { background:#fff; border:1px solid #e4e4e7; color:#18181b; box-shadow:0 1px 3px rgba(0,0,0,.06); }
 .theme-minimal .block-link:hover { border-color:var(--accent); box-shadow:0 4px 14px rgba(0,0,0,.08); }
 .theme-minimal .socials a { background:#fff; border:1px solid #e4e4e7; color:#3f3f46; }
 .theme-minimal .block-email input { background:#fafafa; border-color:#d4d4d8; }
 
 .theme-dark { background:#09090b; color:#fafafa; }
-.theme-dark .block-link, .theme-dark .block-email { background:#18181b; border:1px solid #27272a; color:#fafafa; }
+.theme-dark .block-link, .theme-dark .block-email, .theme-dark .block-text, .theme-dark .block-faq details, .theme-dark .block-contact, .theme-dark .block-discount { background:#18181b; border:1px solid #27272a; color:#fafafa; }
 .theme-dark .block-link:hover { border-color:var(--accent); background:#1f1f23; }
 .theme-dark .socials a { background:#18181b; border:1px solid #27272a; color:#d4d4d8; }
 
 .theme-neon { background:#030014; color:#e0e7ff;}
 .theme-neon .avatar, .theme-neon .avatar-fallback { box-shadow:0 0 24px var(--accent); }
-.theme-neon .block-link, .theme-neon .block-email { background:rgba(139,92,246,.06); border:1px solid var(--accent); color:#e0e7ff; box-shadow:0 0 12px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 12px color-mix(in srgb, var(--accent) 12%, transparent); }
+.theme-neon .block-link, .theme-neon .block-email, .theme-neon .block-text, .theme-neon .block-faq details, .theme-neon .block-contact, .theme-neon .block-discount { background:rgba(139,92,246,.06); border:1px solid var(--accent); color:#e0e7ff; box-shadow:0 0 12px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 12px color-mix(in srgb, var(--accent) 12%, transparent); }
 .theme-neon .block-link:hover { box-shadow:0 0 26px color-mix(in srgb, var(--accent) 60%, transparent); }
 .theme-neon .socials a { border:1px solid var(--accent); color:#e0e7ff; box-shadow:0 0 8px color-mix(in srgb, var(--accent) 30%, transparent); }
 .theme-neon h1 { text-shadow:0 0 18px color-mix(in srgb, var(--accent) 70%, transparent); }
 
 .theme-paper { background:#f5f0e8; color:#292524; }
-.theme-paper .block-link, .theme-paper .block-email { background:#fffdf8; border:1.5px solid #292524; color:#292524; box-shadow:3px 3px 0 #292524; }
+.theme-paper .block-link, .theme-paper .block-email, .theme-paper .block-text, .theme-paper .block-faq details, .theme-paper .block-contact, .theme-paper .block-discount { background:#fffdf8; border:1.5px solid #292524; color:#292524; box-shadow:3px 3px 0 #292524; }
 .theme-paper .block-link:hover { transform:translate(-1px,-1px); box-shadow:5px 5px 0 #292524; }
 .theme-paper .socials a { background:#fffdf8; border:1.5px solid #292524; color:#292524; box-shadow:2px 2px 0 #292524; }
 .theme-paper .block-email input { background:#fff; border:1.5px solid #292524; }
@@ -119,27 +163,86 @@ function isBlockLive(b, now = new Date()) {
 }
 
 function renderBlock(b, basePath) {
+  const meta = b.metadata || {};
+
   if (b.type === 'header') {
     return `<div class="block-header">${esc(b.title)}</div>`;
   }
+
   if (b.type === 'youtube') {
     const id = youtubeId(b.url);
     if (!id) return '';
-    return `<div class="block-video"><iframe src="https://www.youtube-nocookie.com/embed/${esc(id)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`;
+    return `<div class="block-embed ratio-16-9"><iframe src="https://www.youtube-nocookie.com/embed/${esc(id)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`;
   }
+
+  if (b.type === 'vimeo') {
+    const id = vimeoId(b.url);
+    if (!id) return '';
+    return `<div class="block-embed ratio-16-9"><iframe src="https://player.vimeo.com/video/${esc(id)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+  }
+
+  if (b.type === 'spotify') {
+    const embed = spotifyEmbedUrl(b.url);
+    if (!embed) return '';
+    return `<div class="block-embed ratio-short"><iframe src="${esc(embed)}" title="${esc(b.title || 'Spotify')}" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe></div>`;
+  }
+
+  if (b.type === 'soundcloud') {
+    const embed = soundcloudEmbedUrl(b.url);
+    if (!embed) return '';
+    return `<div class="block-embed ratio-short"><iframe src="${esc(embed)}" title="${esc(b.title || 'SoundCloud')}" loading="lazy"></iframe></div>`;
+  }
+
+  if (b.type === 'calendly' || b.type === 'typeform') {
+    if (!b.url) return '';
+    return `<div class="block-embed ratio-tall"><iframe src="${esc(b.url)}" title="${esc(b.title || b.type)}" loading="lazy"></iframe></div>`;
+  }
+
+  if (b.type === 'text') {
+    return `<div class="block-text">${b.title ? `<strong>${esc(b.title)}</strong><br>` : ''}${esc(meta.body || '').replace(/\n/g, '<br>')}</div>`;
+  }
+
+  if (b.type === 'faq') {
+    const items = Array.isArray(meta.items) ? meta.items : [];
+    if (!items.length) return '';
+    return `<div class="block-faq">${items
+      .map((it) => `<details><summary>${esc(it.q || '')}</summary><p>${esc(it.a || '')}</p></details>`)
+      .join('')}</div>`;
+  }
+
+  if (b.type === 'contact') {
+    const parts = [];
+    if (meta.phone) parts.push(`<a href="tel:${esc(meta.phone)}">📞 ${esc(meta.phone)}</a>`);
+    if (meta.email) parts.push(`<a href="mailto:${esc(meta.email)}">✉️ ${esc(meta.email)}</a>`);
+    if (meta.company) parts.push(`<span style="display:block;font-size:.85rem;opacity:.7;margin-top:4px">${esc(meta.company)}</span>`);
+    return `<div class="block-contact"><h3>${esc(meta.name || b.title || 'Contact')}</h3>${parts.join('')}</div>`;
+  }
+
+  if (b.type === 'discount') {
+    return `<div class="block-discount">
+      ${meta.description ? `<div>${esc(meta.description)}</div>` : ''}
+      <div class="code">${esc(b.title || '')}</div>
+    </div>`;
+  }
+
   if (b.type === 'email') {
-    return `<div class="block-email" data-block="${b.id}">
+    // block ids are UUIDs in hosted mode — must be a quoted JS string, not a bare identifier.
+    return `<div class="block-email" data-block="${esc(String(b.id))}">
       <h3>${esc(b.title || 'Join my mailing list')}</h3>
-      <form onsubmit="return subscribe(event, ${b.id})">
+      <form onsubmit="return subscribe(event, '${esc(String(b.id))}')">
         <input type="email" name="email" placeholder="you@email.com" required autocomplete="email">
         <button type="submit">Subscribe</button>
       </form>
       <div class="msg"></div>
     </div>`;
   }
-  // default: link
+
+  // default: link (also covers maps, gofundme, discount code links, tour/events,
+  // discord, whatsapp, instagram, tiktok — these are all just styled URL redirects,
+  // the categorization is a dashboard/picker concern, not a rendering one)
   const thumb = b.thumbnail ? `<img class="thumb" src="${esc(b.thumbnail)}" alt="">` : '';
-  return `<a class="block-link${b.animate ? ' animate' : ''}" href="${basePath}/r/${b.id}" ${/^https?:/.test(b.url) ? '' : 'rel="nofollow"'}>${thumb}<span>${esc(b.title)}</span></a>`;
+  const label = b.title || ICON_LINK_LABELS[b.type] || '';
+  return `<a class="block-link${b.animate ? ' animate' : ''}" href="${basePath}/r/${b.id}" ${/^https?:/.test(b.url) ? '' : 'rel="nofollow"'}>${thumb}<span>${esc(label)}</span></a>`;
 }
 
 function renderPublicPage({ settings, blocks, origin = '', basePath = '' }) {

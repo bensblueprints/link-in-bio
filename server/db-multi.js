@@ -183,18 +183,18 @@ async function listBlocks(pageId) {
 async function createBlock(pageId, f) {
   const { rows: maxRows } = await getPool().query('SELECT COALESCE(MAX(position), -1) AS m FROM blocks WHERE page_id = $1', [pageId]);
   const { rows } = await getPool().query(
-    `INSERT INTO blocks (page_id, type, title, url, thumbnail, animate, position, start_at, end_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-    [pageId, f.type, f.title, f.url, f.thumbnail, !!f.animate, maxRows[0].m + 1, f.start_at, f.end_at]
+    `INSERT INTO blocks (page_id, type, title, url, thumbnail, animate, position, start_at, end_at, metadata)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+    [pageId, f.type, f.title, f.url, f.thumbnail, !!f.animate, maxRows[0].m + 1, f.start_at, f.end_at, JSON.stringify(f.metadata || {})]
   );
   return rows[0];
 }
 
 async function updateBlock(pageId, blockId, f) {
   const { rows } = await getPool().query(
-    `UPDATE blocks SET type=$3, title=$4, url=$5, thumbnail=$6, animate=$7, start_at=$8, end_at=$9
+    `UPDATE blocks SET type=$3, title=$4, url=$5, thumbnail=$6, animate=$7, start_at=$8, end_at=$9, metadata=$10
      WHERE id = $2 AND page_id = $1 RETURNING *`,
-    [pageId, blockId, f.type, f.title, f.url, f.thumbnail, !!f.animate, f.start_at, f.end_at]
+    [pageId, blockId, f.type, f.title, f.url, f.thumbnail, !!f.animate, f.start_at, f.end_at, JSON.stringify(f.metadata || {})]
   );
   return rows[0] || null;
 }

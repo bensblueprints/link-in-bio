@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { User, Blocks, Palette, BarChart3, Mail, LogOut, ExternalLink, Code2 } from 'lucide-react';
 import { authApi } from '../api';
 import { useAuth } from '../AuthContext.jsx';
@@ -32,7 +32,17 @@ export default function Dashboard() {
       <header className="flex items-center justify-between mb-6">
         <Logo size={24} />
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300 capitalize">{user.plan} plan</span>
+          {user.plan === 'free' ? (
+            <Link
+              to="/pricing"
+              className="text-xs font-semibold px-2.5 py-1 rounded-full text-white cursor-pointer"
+              style={{ background: 'var(--ll-orange)' }}
+            >
+              Upgrade
+            </Link>
+          ) : (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300 capitalize">{user.plan} plan</span>
+          )}
           <a
             href="/"
             target="_blank"

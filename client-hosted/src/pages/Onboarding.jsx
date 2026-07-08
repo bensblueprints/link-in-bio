@@ -267,6 +267,11 @@ export default function Onboarding() {
   const [profile, setProfile] = useState({ display_name: '', bio: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [plans, setPlans] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/plans').then((r) => r.json()).then((d) => setPlans(d.plans));
+  }, []);
 
   const idx = STEPS.indexOf(step);
   const goTo = (i) => setStep(STEPS[Math.max(0, Math.min(STEPS.length - 1, i))]);
@@ -282,6 +287,16 @@ export default function Onboarding() {
         profile,
         links: Object.entries(links).map(([platform, value]) => ({ platform, value }))
       });
+      // Onboarding always publishes on Free (no charge happens here) — if a
+      // paid plan was picked, send them to the real Whop checkout now. Their
+      // plan gets applied automatically by the webhook once payment completes,
+      // matched by the same email they used to sign up.
+      const cfg = plans?.[plan];
+      const checkout = plan === 'lifetime' ? cfg?.checkoutUrl : cfg?.checkoutUrl?.annual;
+      if (plan !== 'free' && checkout) {
+        window.location.href = checkout;
+        return;
+      }
       nav('/dashboard');
     } catch (e) {
       setErr(e.message);
