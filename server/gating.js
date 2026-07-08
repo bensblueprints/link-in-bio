@@ -22,7 +22,7 @@ const PLANS = {
   starter: {
     label: 'Starter',
     priceMonthly: 4,
-    priceAnnual: 3,
+    priceAnnual: 3.2,
     themes: 'all',
     unlimitedYoutube: true,
     emailCollect: true,
@@ -44,7 +44,7 @@ const PLANS = {
   premium: {
     label: 'Premium',
     priceMonthly: 17.5,
-    priceAnnual: 15,
+    priceAnnual: 14,
     themes: 'all',
     unlimitedYoutube: true,
     emailCollect: true,
