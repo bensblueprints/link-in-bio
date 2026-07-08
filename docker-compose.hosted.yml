@@ -15,6 +15,13 @@ services:
       - SESSION_SECRET=${SESSION_SECRET:?set SESSION_SECRET in your .env file}
       - WHOP_API_KEY=${WHOP_API_KEY:-}
       - WHOP_WEBHOOK_SECRET=${WHOP_WEBHOOK_SECRET:-}
+      - PUBLIC_URL=${PUBLIC_URL:-https://linkleaf.im}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - FROM_EMAIL=${FROM_EMAIL:-LinkLeaf <no-reply@linkleaf.im>}
     volumes:
       - linkleaf-hosted-data:/data
     depends_on:

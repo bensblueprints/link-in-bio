@@ -17,7 +17,8 @@ function getPool() {
 const RESERVED_USERNAMES = new Set([
   'admin', 'api', 'dashboard', 'login', 'signup', 'logout', 'onboarding', 'pricing',
   'r', 'uploads', 'static', 'assets', 'www', 'app', 'help', 'support', 'about',
-  'terms', 'privacy', 'linkleaf', 'root', 'null', 'undefined'
+  'terms', 'privacy', 'linkleaf', 'root', 'null', 'undefined',
+  'forgot-password', 'reset-password'
 ]);
 
 function isValidUsername(u) {
@@ -97,6 +98,38 @@ async function getSessionUser(sessionId) {
 
 async function deleteSession(sessionId) {
   await getPool().query('DELETE FROM sessions WHERE id = $1', [sessionId]);
+}
+
+// ---- password resets ----
+// Raw token goes in the emailed link; only its SHA-256 hash is stored, same
+// pattern as never storing plaintext secrets — a DB leak alone can't be used
+// to reset accounts.
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function createPasswordReset(userId, ttlMinutes = 60) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+  await getPool().query(
+    'INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
+    [userId, hashToken(token), expiresAt]
+  );
+  return token;
+}
+
+async function consumePasswordReset(token) {
+  const { rows } = await getPool().query(
+    `UPDATE password_resets SET used_at = now()
+     WHERE token_hash = $1 AND used_at IS NULL AND expires_at > now()
+     RETURNING user_id`,
+    [hashToken(String(token || ''))]
+  );
+  return rows[0]?.user_id || null;
+}
+
+async function setUserPassword(userId, passwordHash) {
+  await getPool().query('UPDATE users SET password_hash = $2 WHERE id = $1', [userId, passwordHash]);
 }
 
 // ---- pages ----
@@ -310,6 +343,9 @@ module.exports = {
   createSession,
   getSessionUser,
   deleteSession,
+  createPasswordReset,
+  consumePasswordReset,
+  setUserPassword,
   usernameAvailable,
   findPageByUserId,
   findPageByUsername,

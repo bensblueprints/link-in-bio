@@ -3,6 +3,7 @@
 // here (webhook flips users.plan) — no OAuth login flow to build/maintain.
 const bcrypt = require('bcryptjs');
 const db = require('./db-multi');
+const { sendPasswordResetEmail } = require('./mailer');
 
 const SESSION_COOKIE = 'll_sid';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,6 +40,35 @@ async function login(req, res) {
   res.json({ id: user.id, email: user.email, plan: user.plan });
 }
 
+// Always responds 200 with the same message regardless of whether the email
+// exists, so this endpoint can't be used to enumerate registered accounts.
+async function forgotPassword(req, res) {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
+
+  const user = await db.findUserByEmail(email);
+  if (user) {
+    const token = await db.createPasswordReset(user.id);
+    const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
+    const resetUrl = `${base}/reset-password?token=${token}`;
+    await sendPasswordResetEmail(user.email, resetUrl);
+  }
+  res.json({ ok: true, message: 'If an account exists for that email, a reset link has been sent.' });
+}
+
+async function resetPassword(req, res) {
+  const token = String(req.body?.token || '');
+  const password = String(req.body?.password || '');
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  const userId = await db.consumePasswordReset(token);
+  if (!userId) return res.status(400).json({ error: 'That reset link is invalid or has expired' });
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  await db.setUserPassword(userId, passwordHash);
+  res.json({ ok: true });
+}
+
 async function logout(req, res) {
   const sid = req.cookies?.[SESSION_COOKIE];
   if (sid) await db.deleteSession(sid);
@@ -66,4 +96,4 @@ async function requirePage(req, res, next) {
   next();
 }
 
-module.exports = { SESSION_COOKIE, signup, login, logout, attachUser, requireAuth, requirePage };
+module.exports = { SESSION_COOKIE, signup, login, logout, forgotPassword, resetPassword, attachUser, requireAuth, requirePage };

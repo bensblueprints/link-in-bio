@@ -38,6 +38,9 @@ export default function Login() {
           <label>Password</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
+        <p className="text-xs text-right mt-2">
+          <Link to="/forgot-password" className="text-zinc-500 hover:text-white underline">Forgot password?</Link>
+        </p>
         {err && <p className="text-red-400 text-sm mt-3">{err}</p>}
         <button
           disabled={busy || !email || !password}

@@ -44,9 +44,12 @@ function createMultiApp(opts = {}) {
   app.post('/api/auth/signup', auth.signup);
   app.post('/api/auth/login', auth.login);
   app.post('/api/auth/logout', auth.logout);
-  app.get('/api/auth/me', (req, res) => {
+  app.post('/api/auth/forgot-password', auth.forgotPassword);
+  app.post('/api/auth/reset-password', auth.resetPassword);
+  app.get('/api/auth/me', async (req, res) => {
     if (!req.user) return res.json({ authed: false });
-    res.json({ authed: true, id: req.user.id, email: req.user.email, plan: req.user.plan });
+    const page = await db.findPageByUserId(req.user.id);
+    res.json({ authed: true, id: req.user.id, email: req.user.email, plan: req.user.plan, username: page ? page.username : null });
   });
 
   // ================= ONBOARDING =================
@@ -271,7 +274,7 @@ function createMultiApp(opts = {}) {
     res.redirect(block.url);
   });
 
-  const RESERVED_TOP_LEVEL = new Set(['login', 'signup', 'onboarding', 'dashboard', 'pricing', 'uploads', 'api', 'r', 'assets']);
+  const RESERVED_TOP_LEVEL = new Set(['login', 'signup', 'onboarding', 'dashboard', 'pricing', 'uploads', 'api', 'r', 'assets', 'forgot-password', 'reset-password']);
 
   app.get('/:username', async (req, res, next) => {
     const username = req.params.username.toLowerCase();

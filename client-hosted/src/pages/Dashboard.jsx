@@ -44,7 +44,7 @@ export default function Dashboard() {
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300 capitalize">{user.plan} plan</span>
           )}
           <a
-            href="/"
+            href={user.username ? `/${user.username}` : '/'}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white px-3 py-2 rounded-lg hover:bg-zinc-800 transition-colors"

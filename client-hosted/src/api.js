@@ -43,7 +43,9 @@ export const authApi = {
   me: () => req('GET', '/api/auth/me'),
   signup: (email, password) => req('POST', '/api/auth/signup', { email, password }),
   login: (email, password) => req('POST', '/api/auth/login', { email, password }),
-  logout: () => req('POST', '/api/auth/logout')
+  logout: () => req('POST', '/api/auth/logout'),
+  forgotPassword: (email) => req('POST', '/api/auth/forgot-password', { email }),
+  resetPassword: (token, password) => req('POST', '/api/auth/reset-password', { token, password })
 };
 
 export const onboardingApi = {
