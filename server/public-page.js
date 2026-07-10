@@ -133,6 +133,17 @@ h1 { margin-top:16px; font-size:1.45rem; letter-spacing:-.01em; }
 .block-image { border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.25); text-align:center; }
 .block-image img { width:100%; height:auto; display:block; }
 .block-image-caption { padding:10px 14px 0; font-size:.85rem; font-weight:600; opacity:.85; }
+
+/* Optional thumbnail on any non-image block type. .block-thumb-mini is a
+   small icon + title row shown above embeds that otherwise have no visible
+   title (video/spotify/etc). .block-thumb-icon is a standalone icon shown
+   above text-y blocks that already render their own title/content. */
+.block-thumb-mini { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.block-thumb-mini img { width:36px; height:36px; border-radius:8px; object-fit:cover; flex-shrink:0; }
+.block-thumb-mini span { font-weight:700; font-size:.9rem; opacity:.9; }
+.block-thumb-icon { display:block; width:40px; height:40px; border-radius:8px; object-fit:cover; margin:0 auto 10px; }
+.block-thumb-icon.left { margin:0 0 8px; }
+.block-header-thumb { display:block; width:36px; height:36px; border-radius:50%; object-fit:cover; margin:0 auto 8px; }
 .footer { margin-top:48px; font-size:.75rem; opacity:.45; text-decoration:none; color:inherit; }
 
 /* ---------- Themes ---------- */
@@ -180,54 +191,71 @@ function isBlockLive(b, now = new Date()) {
   return true;
 }
 
+// Small icon+title row shown above embed blocks (video/spotify/etc) that
+// otherwise render no visible title on the page. No-op when no thumbnail set.
+function thumbMini(b) {
+  if (!b.thumbnail) return '';
+  const label = b.title ? `<span>${esc(b.title)}</span>` : '';
+  return `<div class="block-thumb-mini"><img src="${esc(b.thumbnail)}" alt="" loading="lazy">${label}</div>`;
+}
+
+// Standalone icon shown above blocks that already render their own visible
+// title/content (so we don't duplicate the title text). `left` skips the
+// auto-centering for left-aligned blocks like block-text.
+function thumbIcon(b, left = false) {
+  if (!b.thumbnail) return '';
+  return `<img class="block-thumb-icon${left ? ' left' : ''}" src="${esc(b.thumbnail)}" alt="" loading="lazy">`;
+}
+
 function renderBlock(b, basePath) {
   const meta = b.metadata || {};
 
   if (b.type === 'header') {
-    return `<div class="block-header">${esc(b.title)}</div>`;
+    const thumb = b.thumbnail ? `<img class="block-header-thumb" src="${esc(b.thumbnail)}" alt="" loading="lazy">` : '';
+    return `<div class="block-header">${thumb}${esc(b.title)}</div>`;
   }
 
   // Generic video embed — auto-detects YouTube or Vimeo from the pasted URL.
   // (The dedicated 'youtube'/'vimeo' types below still work for anyone using them.)
   if (b.type === 'video' || b.type === 'youtube') {
     const yt = youtubeId(b.url);
-    if (yt) return `<div class="block-embed ratio-16-9"><iframe src="https://www.youtube-nocookie.com/embed/${esc(yt)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`;
+    if (yt) return `${thumbMini(b)}<div class="block-embed ratio-16-9"><iframe src="https://www.youtube-nocookie.com/embed/${esc(yt)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`;
     const vm = vimeoId(b.url);
-    if (vm) return `<div class="block-embed ratio-16-9"><iframe src="https://player.vimeo.com/video/${esc(vm)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+    if (vm) return `${thumbMini(b)}<div class="block-embed ratio-16-9"><iframe src="https://player.vimeo.com/video/${esc(vm)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
     return ''; // no recognizable video id yet
   }
 
   if (b.type === 'vimeo') {
     const id = vimeoId(b.url);
     if (!id) return '';
-    return `<div class="block-embed ratio-16-9"><iframe src="https://player.vimeo.com/video/${esc(id)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+    return `${thumbMini(b)}<div class="block-embed ratio-16-9"><iframe src="https://player.vimeo.com/video/${esc(id)}" title="${esc(b.title || 'Video')}" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
   }
 
   if (b.type === 'spotify') {
     const embed = spotifyEmbedUrl(b.url);
     if (!embed) return '';
-    return `<div class="block-embed ratio-short"><iframe src="${esc(embed)}" title="${esc(b.title || 'Spotify')}" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe></div>`;
+    return `${thumbMini(b)}<div class="block-embed ratio-short"><iframe src="${esc(embed)}" title="${esc(b.title || 'Spotify')}" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe></div>`;
   }
 
   if (b.type === 'soundcloud') {
     const embed = soundcloudEmbedUrl(b.url);
     if (!embed) return '';
-    return `<div class="block-embed ratio-short"><iframe src="${esc(embed)}" title="${esc(b.title || 'SoundCloud')}" loading="lazy"></iframe></div>`;
+    return `${thumbMini(b)}<div class="block-embed ratio-short"><iframe src="${esc(embed)}" title="${esc(b.title || 'SoundCloud')}" loading="lazy"></iframe></div>`;
   }
 
   if (b.type === 'calendly' || b.type === 'typeform') {
     if (!b.url) return '';
-    return `<div class="block-embed ratio-tall"><iframe src="${esc(b.url)}" title="${esc(b.title || b.type)}" loading="lazy"></iframe></div>`;
+    return `${thumbMini(b)}<div class="block-embed ratio-tall"><iframe src="${esc(b.url)}" title="${esc(b.title || b.type)}" loading="lazy"></iframe></div>`;
   }
 
   if (b.type === 'text') {
-    return `<div class="block-text">${b.title ? `<strong>${esc(b.title)}</strong><br>` : ''}${esc(meta.body || '').replace(/\n/g, '<br>')}</div>`;
+    return `<div class="block-text">${thumbIcon(b, true)}${b.title ? `<strong>${esc(b.title)}</strong><br>` : ''}${esc(meta.body || '').replace(/\n/g, '<br>')}</div>`;
   }
 
   if (b.type === 'faq') {
     const items = Array.isArray(meta.items) ? meta.items : [];
     if (!items.length) return '';
-    return `<div class="block-faq">${items
+    return `<div class="block-faq">${thumbIcon(b, true)}${items
       .map((it) => `<details><summary>${esc(it.q || '')}</summary><p>${esc(it.a || '')}</p></details>`)
       .join('')}</div>`;
   }
@@ -237,11 +265,12 @@ function renderBlock(b, basePath) {
     if (meta.phone) parts.push(`<a href="tel:${esc(meta.phone)}">📞 ${esc(meta.phone)}</a>`);
     if (meta.email) parts.push(`<a href="mailto:${esc(meta.email)}">✉️ ${esc(meta.email)}</a>`);
     if (meta.company) parts.push(`<span style="display:block;font-size:.85rem;opacity:.7;margin-top:4px">${esc(meta.company)}</span>`);
-    return `<div class="block-contact"><h3>${esc(meta.name || b.title || 'Contact')}</h3>${parts.join('')}</div>`;
+    return `<div class="block-contact">${thumbIcon(b)}<h3>${esc(meta.name || b.title || 'Contact')}</h3>${parts.join('')}</div>`;
   }
 
   if (b.type === 'discount') {
     return `<div class="block-discount">
+      ${thumbIcon(b)}
       ${meta.description ? `<div>${esc(meta.description)}</div>` : ''}
       <div class="code">${esc(b.title || '')}</div>
     </div>`;
@@ -259,6 +288,7 @@ function renderBlock(b, basePath) {
   if (b.type === 'email') {
     // block ids are UUIDs in hosted mode — must be a quoted JS string, not a bare identifier.
     return `<div class="block-email" data-block="${esc(String(b.id))}">
+      ${thumbIcon(b)}
       <h3>${esc(b.title || 'Join my mailing list')}</h3>
       <form onsubmit="return subscribe(event, '${esc(String(b.id))}')">
         <input type="email" name="email" placeholder="you@email.com" required autocomplete="email">

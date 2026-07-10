@@ -243,11 +243,14 @@ function createMultiApp(opts = {}) {
         return res.status(403).json({ error: 'Free plan is limited to 1 video embed — upgrade for unlimited' });
       }
     }
-    if (f.type === 'image') {
+    // Generalized thumbnail gating: ANY block type can carry a thumbnail now
+    // (not just the dedicated `image` type), and the free-plan cap is shared
+    // across all of them combined.
+    if (f.thumbnail) {
       const existing = await db.listBlocks(req.page.id);
-      const imageCount = existing.filter((b) => b.type === 'image').length;
-      if (!gating.canAddImageBlock(req.user.plan, imageCount)) {
-        return res.status(403).json({ error: 'Free plan is limited to 1 image block — upgrade for unlimited images' });
+      const thumbCount = existing.filter((b) => b.thumbnail).length;
+      if (!gating.canAddThumbnail(req.user.plan, thumbCount)) {
+        return res.status(403).json({ error: 'Free plan is limited to 1 image/thumbnail across all blocks — upgrade for unlimited images' });
       }
     }
     res.status(201).json(await db.createBlock(req.page.id, f));
@@ -265,10 +268,14 @@ function createMultiApp(opts = {}) {
     if (f.type === 'email' && !gating.canUseEmailCollect(req.user.plan)) {
       return res.status(403).json({ error: 'Email-collect blocks require the Starter plan or higher' });
     }
-    if (f.type === 'image' && existing.type !== 'image') {
-      const imageCount = (await db.listBlocks(req.page.id)).filter((b) => b.type === 'image').length;
-      if (!gating.canAddImageBlock(req.user.plan, imageCount)) {
-        return res.status(403).json({ error: 'Free plan is limited to 1 image block — upgrade for unlimited images' });
+    // Only re-check the quota when a thumbnail is being ADDED to a block
+    // that didn't already have one — changing an existing thumbnail to a
+    // different image, or removing it, never needs (or is blocked by) the
+    // quota check.
+    if (f.thumbnail && !existing.thumbnail) {
+      const thumbCount = (await db.listBlocks(req.page.id)).filter((b) => b.thumbnail).length;
+      if (!gating.canAddThumbnail(req.user.plan, thumbCount)) {
+        return res.status(403).json({ error: 'Free plan is limited to 1 image/thumbnail across all blocks — upgrade for unlimited images' });
       }
     }
     const updated = await db.updateBlock(req.page.id, req.params.id, f);

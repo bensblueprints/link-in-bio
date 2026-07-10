@@ -125,13 +125,13 @@ function Editor({ block, onSave, onCancel }) {
         </div>
       )}
 
-      {b.type === 'link' && (
+      {b.type !== 'image' && (
         <div className="flex flex-wrap items-end gap-6">
           <div>
             <label>Thumbnail (optional)</label>
-            <ImageUpload value={b.thumbnail} onChange={(url) => set('thumbnail', url)} label="Small square image" />
+            <ImageUpload value={b.thumbnail} onChange={(url) => set('thumbnail', url)} label="Small image shown with this block" />
           </div>
-          <Toggle checked={!!b.animate} onChange={(v) => set('animate', v)} label="Animate on hover" />
+          {isLinkStyle && <Toggle checked={!!b.animate} onChange={(v) => set('animate', v)} label="Animate on hover" />}
         </div>
       )}
 

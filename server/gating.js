@@ -97,8 +97,10 @@ function planForWhopPlanId(whopPlanId) {
 
 const ALL_THEMES = ['gradient', 'glass', 'minimal', 'dark', 'neon', 'paper'];
 const FREE_YOUTUBE_CAP = 1;
-// Ben's ask: free plan gets exactly one image block (e.g. a WhatsApp QR code);
-// paid plans (anything with unlimitedImages: true) get unlimited image blocks.
+// Ben's ask: free plan gets exactly one image/thumbnail across ALL blocks
+// combined (e.g. a WhatsApp QR code, or a thumbnail on a single link block —
+// they share the same quota, not one-each-per-type); paid plans (anything
+// with unlimitedImages: true) get unlimited thumbnails everywhere.
 const FREE_IMAGE_CAP = 1;
 
 function planConfig(plan) {
@@ -120,11 +122,18 @@ function canAddYoutubeBlock(plan, currentYoutubeCount) {
   return currentYoutubeCount < FREE_YOUTUBE_CAP;
 }
 
-function canAddImageBlock(plan, currentImageCount) {
+// currentThumbnailCount = count of ALL blocks on the page with a non-empty
+// `thumbnail`, regardless of block type (the dedicated `image` block type is
+// just one of many types that can carry a thumbnail now). Free plan gets
+// FREE_IMAGE_CAP total across every type combined; paid plans are unlimited.
+function canAddThumbnail(plan, currentThumbnailCount) {
   const cfg = planConfig(plan);
   if (cfg.unlimitedImages) return true;
-  return currentImageCount < FREE_IMAGE_CAP;
+  return currentThumbnailCount < FREE_IMAGE_CAP;
 }
+
+// Back-compat alias — same quota logic, kept for any older call sites.
+const canAddImageBlock = canAddThumbnail;
 
 function canUseEmailCollect(plan) {
   return planConfig(plan).emailCollect;
@@ -147,6 +156,7 @@ module.exports = {
   canUseTheme,
   canAddYoutubeBlock,
   canAddImageBlock,
+  canAddThumbnail,
   canUseEmailCollect,
   canUseCustomStyling,
   showBadge,
