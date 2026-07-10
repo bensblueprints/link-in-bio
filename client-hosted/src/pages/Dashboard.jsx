@@ -26,6 +26,13 @@ export default function Dashboard() {
 
   if (user === null) return <Navigate to="/login" replace />;
   if (!user) return <div className="min-h-screen flex items-center justify-center text-zinc-500">Loading…</div>;
+  // A logged-in user with no page yet (never finished onboarding, or dropped
+  // off partway) has nothing for this dashboard to show — every tab here
+  // assumes a username exists. Send them back to finish setup instead of
+  // rendering broken "View page"/Embed links that silently fall back to the
+  // homepage. Safe to key off `user.username` because login/signup responses
+  // now include it (see server/auth.js) — no stale-data false positives.
+  if (!user.username) return <Navigate to="/onboarding" replace />;
 
   return (
     <div className="min-h-screen max-w-5xl mx-auto px-4 py-6">
@@ -44,7 +51,7 @@ export default function Dashboard() {
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300 capitalize">{user.plan} plan</span>
           )}
           <a
-            href={user.username ? `/${user.username}` : '/'}
+            href={`/${user.username}`}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white px-3 py-2 rounded-lg hover:bg-zinc-800 transition-colors"

@@ -5,7 +5,7 @@ ARG BASE_PATH=
 ARG ADMIN_PATH=admin
 ENV BASE_PATH=${BASE_PATH}
 ENV ADMIN_PATH=${ADMIN_PATH}
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-setuptools make g++ && rm -rf /var/lib/apt/lists/*
 COPY package*.json ./
 COPY scripts ./scripts
 RUN npm ci
@@ -19,7 +19,7 @@ ARG BASE_PATH=
 ARG ADMIN_PATH=admin
 ENV BASE_PATH=${BASE_PATH}
 ENV ADMIN_PATH=${ADMIN_PATH}
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-setuptools make g++ && rm -rf /var/lib/apt/lists/*
 COPY package*.json ./
 COPY scripts ./scripts
 RUN npm ci --omit=dev

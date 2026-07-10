@@ -253,7 +253,7 @@ function StepProfile({ profile, onChange, onBack, onSubmit, busy }) {
 
 export default function Onboarding() {
   const nav = useNavigate();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const [params] = useSearchParams();
   // A plan chosen on the marketing pricing page arrives as ?plan=pro — skip
   // asking again in the wizard (was the "makes me choose the plan twice" bug).
@@ -305,6 +305,10 @@ export default function Onboarding() {
         window.location.href = checkout;
         return;
       }
+      // Dashboard now redirects back here if it sees no username on the auth
+      // user object — refresh it first so the page we just created actually
+      // takes effect, or we'd bounce the user right back into this wizard.
+      await refresh();
       nav('/dashboard');
     } catch (e) {
       setErr(e.message);

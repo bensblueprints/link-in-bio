@@ -25,7 +25,11 @@ async function signup(req, res) {
   const user = await db.createUser({ email, passwordHash });
   const sid = await db.createSession(user.id);
   res.cookie(SESSION_COOKIE, sid, cookieOpts());
-  res.status(201).json({ id: user.id, email: user.email, plan: user.plan });
+  // A brand-new user never has a page yet, but include the field anyway so
+  // the shape matches /api/auth/me and login() below -- the client's
+  // Dashboard guard relies on `username` being present (not just missing on
+  // stale data) to decide whether to send someone back to onboarding.
+  res.status(201).json({ id: user.id, email: user.email, plan: user.plan, username: null });
 }
 
 async function login(req, res) {
@@ -37,7 +41,11 @@ async function login(req, res) {
   if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
   const sid = await db.createSession(user.id);
   res.cookie(SESSION_COOKIE, sid, cookieOpts());
-  res.json({ id: user.id, email: user.email, plan: user.plan });
+  // Include username (mirrors /api/auth/me) so a returning user who HAS
+  // completed onboarding doesn't get bounced back into the wizard by
+  // Dashboard's "no username yet" guard just because this response omitted it.
+  const page = await db.findPageByUserId(user.id);
+  res.json({ id: user.id, email: user.email, plan: user.plan, username: page ? page.username : null });
 }
 
 // Always responds 200 with the same message regardless of whether the email
