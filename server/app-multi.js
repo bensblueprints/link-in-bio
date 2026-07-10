@@ -243,6 +243,13 @@ function createMultiApp(opts = {}) {
         return res.status(403).json({ error: 'Free plan is limited to 1 video embed — upgrade for unlimited' });
       }
     }
+    if (f.type === 'image') {
+      const existing = await db.listBlocks(req.page.id);
+      const imageCount = existing.filter((b) => b.type === 'image').length;
+      if (!gating.canAddImageBlock(req.user.plan, imageCount)) {
+        return res.status(403).json({ error: 'Free plan is limited to 1 image block — upgrade for unlimited images' });
+      }
+    }
     res.status(201).json(await db.createBlock(req.page.id, f));
   });
 
@@ -257,6 +264,12 @@ function createMultiApp(opts = {}) {
     const f = blockFields({ ...existing, ...req.body });
     if (f.type === 'email' && !gating.canUseEmailCollect(req.user.plan)) {
       return res.status(403).json({ error: 'Email-collect blocks require the Starter plan or higher' });
+    }
+    if (f.type === 'image' && existing.type !== 'image') {
+      const imageCount = (await db.listBlocks(req.page.id)).filter((b) => b.type === 'image').length;
+      if (!gating.canAddImageBlock(req.user.plan, imageCount)) {
+        return res.status(403).json({ error: 'Free plan is limited to 1 image block — upgrade for unlimited images' });
+      }
     }
     const updated = await db.updateBlock(req.page.id, req.params.id, f);
     res.json(updated);

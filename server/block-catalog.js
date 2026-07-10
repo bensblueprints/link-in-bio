@@ -15,7 +15,8 @@ const CATEGORIES = [
       { type: 'link', label: 'Link', icon: 'Link2', implemented: true },
       { type: 'text', label: 'Text', icon: 'Type', implemented: true },
       { type: 'header', label: 'Header', icon: 'Heading', implemented: true },
-      { type: 'video', label: 'Video Embed', icon: 'Video', implemented: true }
+      { type: 'video', label: 'Video Embed', icon: 'Video', implemented: true },
+      { type: 'image', label: 'Image', icon: 'ImageIcon', implemented: true }
     ]
   },
   {

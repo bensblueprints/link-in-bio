@@ -130,6 +130,9 @@ h1 { margin-top:16px; font-size:1.45rem; letter-spacing:-.01em; }
 .block-contact a { display:block; font-size:.9rem; opacity:.85; text-decoration:none; margin-top:4px; }
 .block-discount { padding:16px 18px; border-radius:14px; text-align:center; }
 .block-discount .code { font-family:ui-monospace,monospace; font-size:1.1rem; font-weight:700; letter-spacing:.05em; padding:8px 14px; border-radius:8px; background:rgba(0,0,0,.15); display:inline-block; margin-top:6px; }
+.block-image { border-radius:14px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.25); text-align:center; }
+.block-image img { width:100%; height:auto; display:block; }
+.block-image-caption { padding:10px 14px 0; font-size:.85rem; font-weight:600; opacity:.85; }
 .footer { margin-top:48px; font-size:.75rem; opacity:.45; text-decoration:none; color:inherit; }
 
 /* ---------- Themes ---------- */
@@ -242,6 +245,15 @@ function renderBlock(b, basePath) {
       ${meta.description ? `<div>${esc(meta.description)}</div>` : ''}
       <div class="code">${esc(b.title || '')}</div>
     </div>`;
+  }
+
+  // Plain image block (e.g. a WhatsApp QR code) — rendered as a static <img>,
+  // not a clickable /r/:id redirect. Reuses the existing `thumbnail` column
+  // (already just a generic image-URL string field) rather than adding a new
+  // column; `url` is left unused for this type.
+  if (b.type === 'image') {
+    if (!b.thumbnail) return '';
+    return `<div class="block-image">${b.title ? `<div class="block-image-caption">${esc(b.title)}</div>` : ''}<img src="${esc(b.thumbnail)}" alt="${esc(b.title || '')}" loading="lazy"></div>`;
   }
 
   if (b.type === 'email') {

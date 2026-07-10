@@ -4,7 +4,8 @@ import {
   GripVertical, Trash2, Pencil, X, Clock, Plus,
   Link2, Type, Heading, Youtube, Instagram, Music2, AudioLines, Video, MessageSquare, MessageCircle,
   MapPin, HelpCircle, Contact, Calendar, FileText, HeartHandshake, Tag, Ticket, Mail,
-  ClipboardList, MessageSquareText, BarChart2, Disc3, Download, GraduationCap, CalendarClock, Tags, ShoppingBag, Lock
+  ClipboardList, MessageSquareText, BarChart2, Disc3, Download, GraduationCap, CalendarClock, Tags, ShoppingBag, Lock,
+  Image as ImageIcon
 } from 'lucide-react';
 import { api } from '../api';
 import { Card, Button, ImageUpload, Toggle } from './ui.jsx';
@@ -12,7 +13,8 @@ import { Card, Button, ImageUpload, Toggle } from './ui.jsx';
 const ICONS = {
   Link2, Type, Heading, Youtube, Instagram, Music2, AudioLines, Video, MessageSquare, MessageCircle,
   MapPin, HelpCircle, Contact, Calendar, FileText, HeartHandshake, Tag, Ticket, Mail,
-  ClipboardList, MessageSquareText, BarChart2, Disc3, Download, GraduationCap, CalendarClock, Tags, ShoppingBag
+  ClipboardList, MessageSquareText, BarChart2, Disc3, Download, GraduationCap, CalendarClock, Tags, ShoppingBag,
+  ImageIcon
 };
 
 // Types that just need a plain URL (rendered as a styled link card on the public page).
@@ -130,6 +132,14 @@ function Editor({ block, onSave, onCancel }) {
             <ImageUpload value={b.thumbnail} onChange={(url) => set('thumbnail', url)} label="Small square image" />
           </div>
           <Toggle checked={!!b.animate} onChange={(v) => set('animate', v)} label="Animate on hover" />
+        </div>
+      )}
+
+      {b.type === 'image' && (
+        <div>
+          <label>Image</label>
+          <ImageUpload value={b.thumbnail} onChange={(url) => set('thumbnail', url)} label="Upload image (e.g. a WhatsApp QR code)" />
+          <p className="text-xs text-zinc-500 mt-1.5">Displayed full-width on your page — not a clickable link. Title above is used as an optional caption.</p>
         </div>
       )}
 

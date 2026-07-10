@@ -14,6 +14,7 @@ const PLANS = {
     priceAnnual: 0,
     themes: ['gradient', 'minimal', 'dark'],
     unlimitedYoutube: false,
+    unlimitedImages: false,
     emailCollect: false,
     customStyling: false,
     showBadge: true,
@@ -25,6 +26,7 @@ const PLANS = {
     priceAnnual: 3.2,
     themes: 'all',
     unlimitedYoutube: true,
+    unlimitedImages: true,
     emailCollect: true,
     customStyling: false,
     showBadge: false,
@@ -36,6 +38,7 @@ const PLANS = {
     priceAnnual: 6,
     themes: 'all',
     unlimitedYoutube: true,
+    unlimitedImages: true,
     emailCollect: true,
     customStyling: true,
     showBadge: false,
@@ -47,6 +50,7 @@ const PLANS = {
     priceAnnual: 14,
     themes: 'all',
     unlimitedYoutube: true,
+    unlimitedImages: true,
     emailCollect: true,
     customStyling: true,
     showBadge: false,
@@ -59,6 +63,7 @@ const PLANS = {
     seatCap: 100,
     themes: 'all',
     unlimitedYoutube: true,
+    unlimitedImages: true,
     emailCollect: true,
     customStyling: true,
     showBadge: false,
@@ -92,6 +97,9 @@ function planForWhopPlanId(whopPlanId) {
 
 const ALL_THEMES = ['gradient', 'glass', 'minimal', 'dark', 'neon', 'paper'];
 const FREE_YOUTUBE_CAP = 1;
+// Ben's ask: free plan gets exactly one image block (e.g. a WhatsApp QR code);
+// paid plans (anything with unlimitedImages: true) get unlimited image blocks.
+const FREE_IMAGE_CAP = 1;
 
 function planConfig(plan) {
   return PLANS[plan] || PLANS.free;
@@ -110,6 +118,12 @@ function canAddYoutubeBlock(plan, currentYoutubeCount) {
   const cfg = planConfig(plan);
   if (cfg.unlimitedYoutube) return true;
   return currentYoutubeCount < FREE_YOUTUBE_CAP;
+}
+
+function canAddImageBlock(plan, currentImageCount) {
+  const cfg = planConfig(plan);
+  if (cfg.unlimitedImages) return true;
+  return currentImageCount < FREE_IMAGE_CAP;
 }
 
 function canUseEmailCollect(plan) {
@@ -132,6 +146,7 @@ module.exports = {
   allowedThemes,
   canUseTheme,
   canAddYoutubeBlock,
+  canAddImageBlock,
   canUseEmailCollect,
   canUseCustomStyling,
   showBadge,
