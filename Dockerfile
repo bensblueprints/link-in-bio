@@ -2,7 +2,7 @@ FROM node:20-slim AS build
 WORKDIR /app
 ENV BASE_PATH=/benji
 ENV ADMIN_PATH=edit
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-setuptools make g++ && rm -rf /var/lib/apt/lists/*
 COPY package*.json ./
 COPY scripts ./scripts
 RUN npm ci
@@ -14,7 +14,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV BASE_PATH=/benji
 ENV ADMIN_PATH=edit
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-setuptools make g++ && rm -rf /var/lib/apt/lists/*
 COPY package*.json ./
 COPY scripts ./scripts
 RUN npm ci --omit=dev
