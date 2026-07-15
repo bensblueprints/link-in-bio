@@ -62,7 +62,7 @@ async function loginWithWhop(cfg, openUrl) {
 
   const authUrl = `${OAUTH_BASE}/authorize?` + new URLSearchParams({
     client_id: cfg.clientId, redirect_uri: redirectUri, response_type: 'code',
-    scope: 'openid profile', state,
+    scope: 'openid profile', state, nonce: b64url(crypto.randomBytes(16)), // Whop requires nonce with openid scope
     code_challenge: challenge, code_challenge_method: 'S256',
   });
 
